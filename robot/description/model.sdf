@@ -206,7 +206,7 @@
 
     <!-- LiDAR link and sensor -->
     <link name="lidar_link">
-        <pose>0 0 0.08 0 0 0</pose>
+        <pose>0 0 0.10 0 0 0</pose>
 
         <inertial>
             <mass>0.01</mass>
@@ -269,7 +269,7 @@
     </joint>
 
     <link name="camera_link">
-        <pose>0.20 0 0.30 0 0 0</pose>
+        <pose>0.1 0 0.08 0 0 0</pose>
 
         <inertial>
             <mass>0.05</mass>
