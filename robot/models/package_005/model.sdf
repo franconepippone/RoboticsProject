@@ -1,0 +1,159 @@
+<?xml version="1.0"?>
+<sdf version="1.9">
+  <model name="forklift_package_00005">
+    <static>false</static>
+    <link name="package_body">
+      <pose>0 0 0.12 0 0 0</pose>
+      <inertial>
+        <mass>0.1</mass>
+        <inertia>
+          <ixx>0.0133333</ixx>
+          <iyy>0.0133333</iyy>
+          <izz>0.0133333</izz>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyz>0</iyz>
+        </inertia>
+      </inertial>
+
+      <visual name="apriltag_visual">
+        <pose>0.1505 0 0 1.5708 0 1.5708</pose>
+        <geometry>
+          <plane>
+            <normal>0 0 1</normal>
+            <size>0.2 0.2</size>
+          </plane>
+        </geometry>
+        <material>
+          <diffuse>1 1 1 1</diffuse>
+          <pbr>
+            <metal>
+              <albedo_map>textures/tag36_11_00005.png</albedo_map>
+            </metal>
+          </pbr>
+        </material>
+      </visual>
+
+      <visual name="package_visual">
+        <geometry>
+          <box>
+            <size>0.30 0.30 0.20</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.76 0.58 0.38 1</ambient>
+          <diffuse>0.76 0.58 0.38 1</diffuse>
+        </material>
+      </visual>
+
+      <collision name="package_collision">
+        <geometry>
+          <box>
+            <size>0.30 0.30 0.20</size>
+          </box>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="support_front">
+      <pose>0.135 0 0.0 0 0 0</pose>
+      <inertial>
+        <mass>0.05</mass>
+        <inertia>
+          <ixx>0.0000571</ixx>
+          <iyy>0.0000571</iyy>
+          <izz>0.0000075</izz>
+          <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <visual name="visual">
+        <geometry><box><size>0.03 0.03 0.03</size></box></geometry>
+        <material>
+          <diffuse>0.5 0.38 0.28 1</diffuse>
+        </material>
+      </visual>
+      <collision name="collision">
+        <geometry><box><size>0.03 0.03 0.03</size></box></geometry>
+      </collision>
+    </link>
+
+    <link name="support_back">
+      <pose>-0.135 0 0.0 0 0 0</pose>
+      <inertial>
+        <mass>0.05</mass>
+        <inertia>
+          <ixx>0.0000571</ixx>
+          <iyy>0.0000571</iyy>
+          <izz>0.0000075</izz>
+          <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <visual name="visual">
+        <geometry><box><size>0.03 0.03 0.03</size></box></geometry>
+        <material>
+          <diffuse>0.5 0.38 0.28 1</diffuse>
+        </material>
+      </visual>
+      <collision name="collision">
+        <geometry><box><size>0.03 0.03 0.03</size></box></geometry>
+      </collision>
+    </link>
+
+    <link name="support_left">
+      <pose>0 0.135 0.0 0 0 0</pose>
+      <inertial>
+        <mass>0.05</mass>
+        <inertia>
+          <ixx>0.0000571</ixx>
+          <iyy>0.0000571</iyy>
+          <izz>0.0000075</izz>
+          <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <visual name="visual">
+        <geometry><box><size>0.03 0.03 0.03</size></box></geometry>
+        <material>
+          <diffuse>0.5 0.38 0.28 1</diffuse>
+        </material>
+      </visual>
+      <collision name="collision">
+        <geometry><box><size>0.03 0.03 0.03</size></box></geometry>
+      </collision>
+    </link>
+
+    <link name="support_right">
+      <pose>0 -0.135 0.0 0 0 0</pose>
+      <inertial>
+        <mass>0.05</mass>
+        <inertia>
+          <ixx>0.0000571</ixx>
+          <iyy>0.0000571</iyy>
+          <izz>0.0000075</izz>
+          <ixy>0</ixy><ixz>0</ixz><iyz>0</iyz>
+        </inertia>
+      </inertial>
+      <visual name="visual">
+        <geometry><box><size>0.03 0.03 0.03</size></box></geometry>
+        <material>
+          <diffuse>0.5 0.38 0.28 1</diffuse>
+        </material>
+      </visual>
+      <collision name="collision">
+        <geometry><box><size>0.03 0.03 0.03</size></box></geometry>
+      </collision>
+    </link>
+
+    <joint name="support_front_joint" type="fixed">
+      <parent>package_body</parent><child>support_front</child>
+    </joint>
+    <joint name="support_back_joint" type="fixed">
+      <parent>package_body</parent><child>support_back</child>
+    </joint>
+    <joint name="support_left_joint" type="fixed">
+      <parent>package_body</parent><child>support_left</child>
+    </joint>
+    <joint name="support_right_joint" type="fixed">
+      <parent>package_body</parent><child>support_right</child>
+    </joint>
+  </model>
+</sdf>

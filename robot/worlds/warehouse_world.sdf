@@ -390,15 +390,12 @@
     </model>
 
   <include>
-    <uri>model://package</uri>
+    <uri>model://package_000</uri>
     <name>forklift_package</name>
-    <pose>1.5 0 0 0 0 0</pose>
+    <pose>1.5 0 .2 0 0 3.14</pose>
   </include>
 
 
   </world>
-
-
-
 
 </sdf>

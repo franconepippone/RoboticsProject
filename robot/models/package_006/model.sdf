@@ -1,13 +1,9 @@
 <?xml version="1.0"?>
 <sdf version="1.9">
-  <model name="forklift_package">
+  <model name="forklift_package_00006">
     <static>false</static>
-
-    <!-- Main package: 20 cm x 20 cm x 20 cm.
-         Its bottom is at z = 0.20 m in the model frame. -->
     <link name="package_body">
       <pose>0 0 0.12 0 0 0</pose>
-
       <inertial>
         <mass>0.1</mass>
         <inertia>
@@ -19,6 +15,24 @@
           <iyz>0</iyz>
         </inertia>
       </inertial>
+
+      <visual name="apriltag_visual">
+        <pose>0.1505 0 0 1.5708 0 1.5708</pose>
+        <geometry>
+          <plane>
+            <normal>0 0 1</normal>
+            <size>0.2 0.2</size>
+          </plane>
+        </geometry>
+        <material>
+          <diffuse>1 1 1 1</diffuse>
+          <pbr>
+            <metal>
+              <albedo_map>textures/tag36_11_00006.png</albedo_map>
+            </metal>
+          </pbr>
+        </material>
+      </visual>
 
       <visual name="package_visual">
         <geometry>
@@ -41,9 +55,6 @@
       </collision>
     </link>
 
-    <!-- Four supports, centered on the four bottom edges.
-         Each support is 3 cm wide, 3 cm deep, and 20 cm tall.
-         They extend from ground level to the package bottom. -->
     <link name="support_front">
       <pose>0.135 0 0.0 0 0 0</pose>
       <inertial>
@@ -56,13 +67,13 @@
         </inertia>
       </inertial>
       <visual name="visual">
-        <geometry><box><size>00.03 0.03 0.03</size></box></geometry>
+        <geometry><box><size>0.03 0.03 0.03</size></box></geometry>
         <material>
           <diffuse>0.5 0.38 0.28 1</diffuse>
         </material>
       </visual>
       <collision name="collision">
-        <geometry><box><size>00.03 0.03 0.03</size></box></geometry>
+        <geometry><box><size>0.03 0.03 0.03</size></box></geometry>
       </collision>
     </link>
 
@@ -78,13 +89,13 @@
         </inertia>
       </inertial>
       <visual name="visual">
-        <geometry><box><size>00.03 0.03 0.03</size></box></geometry>
+        <geometry><box><size>0.03 0.03 0.03</size></box></geometry>
         <material>
           <diffuse>0.5 0.38 0.28 1</diffuse>
         </material>
       </visual>
       <collision name="collision">
-        <geometry><box><size>00.03 0.03 0.03</size></box></geometry>
+        <geometry><box><size>0.03 0.03 0.03</size></box></geometry>
       </collision>
     </link>
 
@@ -100,13 +111,13 @@
         </inertia>
       </inertial>
       <visual name="visual">
-        <geometry><box><size>00.03 0.03 0.03</size></box></geometry>
+        <geometry><box><size>0.03 0.03 0.03</size></box></geometry>
         <material>
           <diffuse>0.5 0.38 0.28 1</diffuse>
         </material>
       </visual>
       <collision name="collision">
-        <geometry><box><size>00.03 0.03 0.03</size></box></geometry>
+        <geometry><box><size>0.03 0.03 0.03</size></box></geometry>
       </collision>
     </link>
 
@@ -122,17 +133,16 @@
         </inertia>
       </inertial>
       <visual name="visual">
-        <geometry><box><size>00.03 0.03 0.03</size></box></geometry>
+        <geometry><box><size>0.03 0.03 0.03</size></box></geometry>
         <material>
           <diffuse>0.5 0.38 0.28 1</diffuse>
         </material>
       </visual>
       <collision name="collision">
-        <geometry><box><size>00.03 0.03 0.03</size></box></geometry>
+        <geometry><box><size>0.03 0.03 0.03</size></box></geometry>
       </collision>
     </link>
 
-    <!-- Rigidly join the supports to the package body. -->
     <joint name="support_front_joint" type="fixed">
       <parent>package_body</parent><child>support_front</child>
     </joint>
