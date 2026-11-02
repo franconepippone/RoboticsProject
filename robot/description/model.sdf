@@ -298,7 +298,7 @@
             <visualize>true</visualize>
             <topic>/camera/image_raw</topic>
             <camera_info_topic>/camera/camera_info</camera_info_topic>
-            <gz_frame_id>camera_link</gz_frame_id>
+            <gz_frame_id>camera_optical_frame</gz_frame_id>
 
             <camera>
             <horizontal_fov>1.047</horizontal_fov>
