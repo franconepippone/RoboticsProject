@@ -29,6 +29,7 @@
           <pbr>
             <metal>
               <albedo_map>textures/tag36_11_00005.png</albedo_map>
+              <metalness>0</metalness>
             </metal>
           </pbr>
         </material>
