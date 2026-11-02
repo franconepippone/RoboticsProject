@@ -1,13 +1,3 @@
-# May be missing some packages required by recently edited files
-# If you find missing packages, please add them here
-
-# To sink your requirements, inside a virtual environment (recommended), run:
-# pip install --upgrade pip
-# pip install -r requirements.txt
-
-# PS Is this file useless? requirements should already be defined in the setup.py file
-
-apriltag 
-opencv-python 
-numpy
-pupil-apriltags
+numpy==1.26.4
+opencv-python==4.10.0.84
+pupil-apriltags==1.0.4.post11

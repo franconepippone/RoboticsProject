@@ -1,0 +1,210 @@
+<?xml version="1.0" ?>
+<sdf version="1.9">
+  <model name="forklift_fork">
+    <self_collide>false</self_collide>
+    <static>false</static>
+
+    <!-- Fixed mast: rigidly attached to the TurtleBot4 base_link
+         via the DetachableJoint plugin (default behavior:
+         attached since startup, never detached). -->
+    <link name="mast">
+      <pose>0 0 0.25 0 0 0</pose>
+      <inertial>
+        <mass>1.0</mass>
+        <inertia>
+          <ixx>0.02</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.02</iyy>
+          <iyz>0</iyz>
+          <izz>0.01</izz>
+        </inertia>
+      </inertial>
+      <visual name="mast_visual">
+        <geometry>
+          <box>
+            <size>0.10 0.15 0.50</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.6 0.05 0.05 1</ambient>
+          <diffuse>0.6 0.05 0.05 1</diffuse>
+        </material>
+      </visual>
+      <!--
+      <collision name="mast_collision">
+        <geometry>
+          <box>
+            <size>0.10 0.15 0.50</size>
+          </box>
+        </geometry>
+      </collision>
+      -->
+    </link>
+
+    <!-- Carriage: moves up and down along the mast -->
+    <link name="carriage">
+      <pose>0.02 0 0.15 0 0 0</pose>
+      <inertial>
+        <mass>0.5</mass>
+        <inertia>
+          <ixx>0.01</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>0.01</iyy>
+          <iyz>0</iyz>
+          <izz>0.005</izz>
+        </inertia>
+      </inertial>
+      <visual name="carriage_visual">
+        <geometry>
+          <box>
+            <size>0.12 0.17 0.15</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.1 0.6 0.1 1</ambient>
+          <diffuse>0.1 0.6 0.1 1</diffuse>
+        </material>
+      </visual>
+      <!--
+      <collision name="carriage_collision">
+        <geometry>
+          <box>
+            <size>0.12 0.17 0.15</size>
+          </box>
+        </geometry>
+      </collision>
+      -->
+
+      <!-- Tines (fork fingers), rigidly attached to the carriage -->
+      <visual name="tine_left_visual">
+        <pose>0.25 0.05 -0.08 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.40 0.03 0.03</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.6 0.05 0.05 1</ambient>
+          <diffuse>0.6 0.05 0.05 1</diffuse>
+        </material>
+      </visual>
+      <!--
+      <collision name="tine_left_collision">
+        <pose>0.25 0.05 -0.08 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.40 0.03 0.03</size>
+          </box>
+        </geometry>
+      </collision>
+      -->
+
+      <visual name="tine_right_visual">
+        <pose>0.25 -0.05 -0.08 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.40 0.03 0.03</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.6 0.05 0.05 1</ambient>
+          <diffuse>0.6 0.05 0.05 1</diffuse>
+        </material>
+      </visual>
+      <!--
+      <collision name="tine_right_collision">
+        <pose>0.25 -0.05 -0.08 0 0 0</pose>
+        <geometry>
+          <box>
+            <size>0.40 0.03 0.03</size>
+          </box>
+        </geometry>
+      </collision>
+      -->
+    </link>
+
+    <!-- Reference point at the fork tips: will be the parent_link
+         used by forklift_manager to create runtime attachment
+         (DetachableJoint) to the grabbed package. -->
+    <link name="fork_tip">
+      <pose>0.47 0 0.07 0 0 0</pose>
+      <inertial>
+        <mass>0.001</mass>
+        <inertia>
+          <ixx>1e-6</ixx>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyy>1e-6</iyy>
+          <iyz>0</iyz>
+          <izz>1e-6</izz>
+        </inertia>
+      </inertial>
+    </link>
+
+    <joint name="lift_joint" type="prismatic">
+      <parent>mast</parent>
+      <child>carriage</child>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>0</lower>
+          <upper>0.15</upper>
+          <effort>1000</effort>
+          <velocity>0.1</velocity>
+        </limit>
+        <dynamics>
+          <damping>5</damping>
+        </dynamics>
+      </axis>
+    </joint>
+
+    <joint name="fork_tip_joint" type="fixed">
+      <parent>carriage</parent>
+      <child>fork_tip</child>
+    </joint>
+
+    <plugin
+      filename="gz-sim-joint-position-controller-system"
+      name="gz::sim::systems::JointPositionController">
+      <joint_name>lift_joint</joint_name>
+      
+      <!-- Proportional gain: determines how strongly the joint pushes toward the target -->
+      <p_gain>2000.0</p_gain>
+      
+      <!-- Derivative gain: dampens the movement to prevent violent oscillations -->
+      <d_gain>50.0</d_gain>
+      
+      <!-- Integral gain (often kept at 0 for simple prismatic joints) -->
+      <i_gain>0.0</i_gain>
+      
+      <!-- Maximum force limits the controller is allowed to apply -->
+      <cmd_max>1000.0</cmd_max>
+      <cmd_min>-1000.0</cmd_min>
+    </plugin>
+
+    <!-- Permanent attachment to TurtleBot4: attached since startup
+         (plugin default behavior) and never detached.
+         ASSUMPTION: robot model "turtlebot4", root link "base_link". -->
+    <plugin filename="gz-sim-detachable-joint-system" name="gz::sim::systems::DetachableJoint">
+      <parent_link>mast</parent_link>
+      <child_model>turtlebot4</child_model>
+      <child_link>base_link</child_link>
+      <attach_topic>/forklift_fork/mount/attach</attach_topic>
+      <detach_topic>/forklift_fork/mount/detach</detach_topic>
+      <output_topic>/forklift_fork/mount/state</output_topic>
+    </plugin>
+
+    <!-- Dynamic attachment for grabbing packages at runtime -->
+    <plugin filename="gz-sim-detachable-joint-system" name="gz::sim::systems::DetachableJoint">
+      <parent_link>fork_tip</parent_link>
+      <child_model>test_package</child_model>
+      <child_link>link</child_link>
+      <attach_topic>/forklift_fork/package/attach</attach_topic>
+      <detach_topic>/forklift_fork/package/detach</detach_topic>
+      <output_topic>/forklift_fork/package/state</output_topic>
+    </plugin>
+
+  </model>
+</sdf>

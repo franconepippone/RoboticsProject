@@ -1,0 +1,22 @@
+# Bridge configuration for forklift control
+
+# Command to move the prismatic lift joint (ROS 2 -> Gazebo)
+- ros_topic_name: "/forklift_fork/lift_joint/cmd_pos"
+  gz_topic_name: "/model/forklift_fork/joint/lift_joint/0/cmd_pos"
+  ros_type_name: "std_msgs/msg/Float64"
+  gz_type_name: "gz.msgs.Double"
+  direction: ROS_TO_GZ
+
+# Command to attach the package
+- ros_topic_name: "/forklift_fork/package/attach"
+  gz_topic_name: "/forklift_fork/package/attach"
+  ros_type_name: "std_msgs/msg/Empty"
+  gz_type_name: "gz.msgs.Empty"
+  direction: ROS_TO_GZ
+
+# Command to detach the package
+- ros_topic_name: "/forklift_fork/package/detach"
+  gz_topic_name: "/forklift_fork/package/detach"
+  ros_type_name: "std_msgs/msg/Empty"
+  gz_type_name: "gz.msgs.Empty"
+  direction: ROS_TO_GZ

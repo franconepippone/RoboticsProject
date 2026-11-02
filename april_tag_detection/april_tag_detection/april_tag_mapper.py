@@ -21,7 +21,7 @@ from geometry_msgs.msg import PointStamped
 # By default, the resolved topic name is /apriltag_detection/tag_detection
 INCOMING_TAG_DETECTION_TOPIC = '/tag_detection'
 
-GLOBAL_FRAME_ID = "odom" # ideally, this should be changed to "map" when using slam
+GLOBAL_FRAME_ID = "map" # ideally, this should be changed to "map" when using slam
 
 class TagMapper(Node):
     """

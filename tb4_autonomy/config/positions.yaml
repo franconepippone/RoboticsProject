@@ -1,0 +1,31 @@
+/**:
+  ros__parameters:
+
+    initial_pose:
+      x: 0.0
+      y: 0.0
+      yaw: 0.0
+
+    storage_location:
+      x: 5.0
+      y: 0.0
+      yaw: 0.0
+
+    delivery_locations:
+      tag_1:
+        x: 0.0
+        y: -5.0
+        yaw: 0.0
+      tag2:
+        x: 0.0
+        y: 5.0
+        yaw: 0.0
+      tag3:
+        x: 0.0
+        y: 0.0
+        yaw: 0.0
+      tag4:
+        x: -5.0
+        y: 0.0
+        yaw: 0.0
+

@@ -1,0 +1,75 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <model name="test_package">
+    <static>false</static>
+    <link name="link">
+      <!-- Physical and mass properties of the package -->
+      <inertial>
+        <mass>5.0</mass>
+        <inertia>
+          <ixx>0.208</ixx>
+          <iyy>0.208</iyy>
+          <izz>0.208</izz>
+          <ixy>0.0</ixy>
+          <ixz>0.0</ixz>
+          <iyz>0.0</iyz>
+        </inertia>
+      </inertial>
+
+      <!-- Physical collision geometry with friction for the forks -->
+      <collision name="collision">
+        <geometry>
+          <box>
+            <size>0.5 0.5 0.5</size>
+          </box>
+        </geometry>
+        <surface>
+          <friction>
+            <ode>
+              <mu>1.0</mu>
+              <mu2>1.0</mu2>
+            </ode>
+          </friction>
+        </surface>
+      </collision>
+
+      <!-- Visual appearance of the package (Cardboard box) -->
+      <visual name="visual">
+        <geometry>
+          <box>
+            <size>0.5 0.5 0.5</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.8 0.6 0.2 1.0</ambient>
+          <diffuse>0.8 0.6 0.2 1.0</diffuse>
+          <specular>0.1 0.1 0.1 1.0</specular>
+          <pbr>
+            <metal>
+              <albedo_color>0.8 0.6 0.2 1.0</albedo_color>
+            </metal>
+          </pbr>
+        </material>
+      </visual>
+
+      <!-- AprilTag texture positioned flush on the front surface (+X = 0.251m) -->
+      <visual name="apriltag_visual">
+        <pose>-0.251 0 0 0 1.5708 3.14159</pose>
+        <geometry>
+          <plane>
+            <normal>0 0 1</normal>
+            <size>0.2 0.2</size>
+          </plane>
+        </geometry>
+        <material>
+          <diffuse>1 1 1 1</diffuse>
+          <pbr>
+            <metal>
+              <albedo_map>textures/tag36_11_00001.png</albedo_map>
+            </metal>
+          </pbr>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>
