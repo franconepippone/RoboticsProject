@@ -1,0 +1,21 @@
+laser_obstacle_detector:
+  ros__parameters:
+
+    # Angular sector to inspect (radians)
+    angle_min: -0.52 # +30deg
+    angle_max: 0.52 # -30deg
+
+    # An obstacle ray is a valid ray closer than this distance (meters)
+    distance_threshold: 0.25
+
+    # Minimum fraction of obstacle rays required (0.0 - 1.0)
+    confidence_threshold: 0.10
+
+    # LiDAR input
+    scan_topic: /scan_raw
+
+    # Detection output
+    output_topic: /obstacle/detection
+
+    # Minimum number of valid rays required for a decision
+    min_valid_rays: 10

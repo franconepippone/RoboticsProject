@@ -30,7 +30,8 @@ setup(
         ],
     },
     entry_points={
-        'console_scripts': [
-        ],
-    },
+    'console_scripts': [
+        'laser_obstacle_detector = pallet_pickup.laser_obstacle_detector:main',
+    ],
+},
 )
