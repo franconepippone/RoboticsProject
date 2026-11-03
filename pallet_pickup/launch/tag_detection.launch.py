@@ -1,12 +1,17 @@
 from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument
+
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
+from launch.substitutions import LaunchConfiguration
 import os
 
 
 def generate_launch_description():
     package_share = get_package_share_directory('pallet_pickup')
     params_file = os.path.join(package_share, 'config', 'apriltag.yaml')
+
+    use_sim_time = LaunchConfiguration('use_sim_time', default='true')
 
     # launches apriltag_ros detection node with appropriate remappings and paramters from config file
     apriltag_node = Node(
@@ -38,9 +43,15 @@ def generate_launch_description():
             '--child-frame-id', 'camera_optical_frame',
         ],
         output='screen',
+        parameters=[{'use_sim_time': use_sim_time}],
     )
 
     return LaunchDescription([
+        DeclareLaunchArgument(
+            'use_sim_time',
+            default_value='false',
+            description='Use simulation clock'
+        ),
         camera_transform,
         apriltag_node,
     ])

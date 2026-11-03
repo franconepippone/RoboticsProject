@@ -1,5 +1,6 @@
 apriltag:
   ros__parameters:
+    use_sim_time: true
     image_transport: raw
 
     family: 36h11

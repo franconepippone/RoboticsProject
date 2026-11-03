@@ -29,6 +29,7 @@ endif()
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/ObstacleDetection.msg"
   "srv/GetTagPosition.srv"
+  "action/PickupPallet.action"
   DEPENDENCIES geometry_msgs std_msgs
 )
 

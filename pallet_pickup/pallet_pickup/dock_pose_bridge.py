@@ -1,3 +1,6 @@
+from contextlib import contextmanager
+from typing import Iterator
+
 from rclpy.duration import Duration
 from rclpy.time import Time
 from rclpy.node import Node
@@ -7,7 +10,9 @@ from tf2_ros import Buffer, TransformListener
 
 class DockPoseBridge:
     """Publishes the selected AprilTag pose in a target frame while active.
-    Use as a component inside a master node."""
+    Use as a component inside a master node.
+    
+    Provides 'publish_for' for context manager usage"""
 
     def __init__(
         self,
@@ -37,6 +42,15 @@ class DockPoseBridge:
         self.timer = node.create_timer(
             1.0 / publish_rate, self._publish_pose,
         )
+    
+    @contextmanager
+    def publish_for(self, tag_id: int) -> Iterator[None]:
+        """Publish the selected tag pose for the duration of the context."""
+        self.start(tag_id)
+        try:
+            yield
+        finally:
+            self.stop()
 
     def start(self, tag_id: int) -> None:
         """Start publishing the pose of the selected tag."""
