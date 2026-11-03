@@ -1,0 +1,45 @@
+/**:
+  ros__parameters:
+
+    delivery_locations:
+      tag_1:
+        position:
+          x: 4.7
+          y: 7.7
+          z: 0.0
+        orientation:
+          x: 0.0
+          y: 0.0
+          z: 0.7071068
+          w: 0.7071068
+      tag_2:
+        position:
+          x: 4.7
+          y: -7.0
+          z: 0.0
+        orientation:
+          x: 0.0
+          y: 0.0
+          z: -0.7071068
+          w: 0.7071068
+      tag_3:
+        position:
+          x: -4.7
+          y: -7.0
+          z: 0.0
+        orientation:
+          x: 0.0
+          y: 0.0
+          z: -0.7071068
+          w: 0.7071068
+      tag_4:
+        position:
+          x: -4.7
+          y: 7.7
+          z: 0.0
+        orientation:
+          x: 0.0
+          y: 0.0
+          z: 0.7071068
+          w: 0.7071068
+        

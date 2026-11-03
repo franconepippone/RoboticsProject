@@ -29,7 +29,8 @@ find_package(geometry_msgs REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/GetTagPosition.srv"
-  DEPENDENCIES geometry_msgs  
+  "action/DropPackage.action"
+  DEPENDENCIES geometry_msgs action_msgs
 )
 
 ament_export_dependencies(rosidl_default_runtime)

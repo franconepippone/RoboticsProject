@@ -1,0 +1,8 @@
+# --- GOAL ---
+---
+# --- RESULT ---
+bool success
+string message
+---
+# --- FEEDBACK ---
+string status
