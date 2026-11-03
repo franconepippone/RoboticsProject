@@ -32,6 +32,7 @@ setup(
     entry_points={
     'console_scripts': [
         'laser_obstacle_detector = pallet_pickup.laser_obstacle_detector:main',
+        'dock_pose_bridge = pallet_pickup.dock_pose_bridge_node:main',
     ],
 },
 )
