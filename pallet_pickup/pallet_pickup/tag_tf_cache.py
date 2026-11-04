@@ -29,6 +29,8 @@ class TagTFCache:
         self,
         tag_id: int,
         max_age: float,
+        target_frame_override: str | None = None,
+        timeout: float = 1.0
     ) -> TransformStamped | None:
         """
         Return the latest tag transform in target_frame if it is fresh.
@@ -44,10 +46,10 @@ class TagTFCache:
 
         try:
             transform = self.tf_buffer.lookup_transform(
-                self.target_frame,
+                target_frame_override or self.target_frame,
                 tag_frame,
                 Time(),
-                timeout=Duration(seconds=1.0),
+                timeout=Duration(seconds=timeout),
             )
         except Exception as ex:
             self.node.get_logger().warn(

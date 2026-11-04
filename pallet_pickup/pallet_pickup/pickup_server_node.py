@@ -1,6 +1,8 @@
 from typing import cast
+import math 
 
 import rclpy
+from rclpy.impl.logging_severity import LoggingSeverity
 from rclpy.node import Node
 from rclpy.action import ActionClient, ActionServer
 from rclpy.action.server import ServerGoalHandle
@@ -9,12 +11,15 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.task import Future
 
 from nav2_msgs.action import DockRobot
+from geometry_msgs.msg import Twist, Vector3
 from nav2_msgs.action._dock_robot import DockRobot_GetResult_Response
 from custom_interfaces.action import PickupPallet
 
 from pallet_pickup.dock_pose_bridge import DockPoseBridge
 from pallet_pickup.tag_tf_cache import TagTFCache
-from pallet_pickup.utils import compute_staging_pose
+from pallet_pickup.twist_controller import TwistController
+from pallet_pickup.planar_odometry_listener import PlanarOdometryListener
+from pallet_pickup.utils import compute_staging_pose, get_yaw_error
 
 
 class PickupServer(Node):
@@ -22,8 +27,20 @@ class PickupServer(Node):
     def __init__(self):
         super().__init__('pickup_server')
 
-        self.pose_bridge = DockPoseBridge(node=self, max_detection_age=5.0)
-        self.tag_cache = TagTFCache(node=self)
+        self.pose_bridge = DockPoseBridge(
+            node=self, 
+            max_detection_age=5.0           # allowing a bigger age allows docking to recover even if tag is temporarily hidden
+        )
+        self.tag_cache = TagTFCache(
+            node=self, 
+            target_frame='odom'            # fixed frame of docking
+        )
+        self.vel_control = TwistController(
+            node=self,
+            topic='/cmd_vel',
+            frequency=20
+        )
+        self.robot_odom = PlanarOdometryListener(self)
 
         self.callback_group = ReentrantCallbackGroup()
 
@@ -54,12 +71,18 @@ class PickupServer(Node):
     async def execute_callback(self, goal_handle: ServerGoalHandle):
         """Async cooroutine coordinating all steps involved in the pallet pickup process."""
 
+        # shorthand for aborting the goal
+        def _abort(msg: str) -> PickupPallet.Result:
+            self.get_logger().error(msg)
+            goal_handle.abort()
+            return self._build_abort_response(msg)
+
         self.get_logger().info('Received pallet docking request')
 
         ### 0. Verify dependencies are available
 
         if not self.dock_client.wait_for_server(timeout_sec=10.0):
-            return self._build_abort_response('Nav2 docking server unavailable')
+            return _abort('Nav2 docking server unavailable')
 
 
         ### 1. Validate tag ID and if tag ID is detected available and stable
@@ -70,12 +93,12 @@ class PickupServer(Node):
         tag_id = request.tag_id
 
         if not isinstance(tag_id, int) or tag_id < 0:
-            return self._build_abort_response(f'Invalid tag ID: {tag_id}')
+            return _abort(f'Invalid tag ID: {tag_id}')
         
         transform = self.tag_cache.get_tag_frame(tag_id, 5.0) 
         if transform is None:
-            return self._build_abort_response(f'Tag not available or too old: {tag_id}')
-
+            return _abort(f'Tag not available or too old: {tag_id}')
+        
         #if not self.tag_cache.is_tag_available(tag_id):
         #    goal_handle.abort()
         #    result = PickupPallet.Result()
@@ -108,36 +131,100 @@ class PickupServer(Node):
             nav_goal_handle: ClientGoalHandle = cast(ClientGoalHandle, await send_future)
 
             if not bool(nav_goal_handle.accepted):
-                return self._build_abort_response('Nav2 rejected docking goal')
+                return _abort('Nav2 rejected docking goal')
 
             result_future: Future = nav_goal_handle.get_result_async()
             nav_result: DockRobot_GetResult_Response = cast(DockRobot_GetResult_Response, await result_future)
 
-        self.get_logger().debug('Dock pose bridge disabled for tag {tag_id}')
         # outside ctxmng
+        self.get_logger().debug('Dock pose bridge disabled for tag {tag_id}')
+
+        if not nav_result.result.success:
+            return _abort(f'Nav2 docking failed: {nav_result.result.error_msg} [{nav_result.result.error_code}]')
+
+
+        ### 4. Fine tune yaw alignment manually
+
+        self.get_logger().info('Fine tuning yaw aligment with respect to tag')
+
+        transform = self.tag_cache.get_tag_frame(
+            tag_id, 
+            max_age=5.0,
+            target_frame_override='base_link',  # we want the tag in base_link to compute yaw error 
+            timeout=5.0
+        ) 
+        if transform is None:
+            return _abort(f'Tag is undetectable for yaw fine tuning: {tag_id}')
+        
+        error_rad = get_yaw_error(transform.transform)
+        self.get_logger().info(f'Measured yaw error after docking of: {error_rad} radians')
+
+        DRIFT_COEFF = 0.6
+        TOLL = .001
+
+        starting_angle = self.robot_odom.get_angle()
+        target_angle = starting_angle + error_rad * DRIFT_COEFF
+
+        self.get_logger().debug(f'Starting angle is {starting_angle}rad, target is {target_angle}rad')
+
+        def error():
+            transform = self.tag_cache.get_tag_frame(
+                tag_id, 
+                max_age=5.0,
+                target_frame_override='base_link',  # we want the tag in base_link to compute yaw error 
+                timeout=5.0
+            ) 
+            if transform is None:
+                raise ValueError()
+        
+            return get_yaw_error(transform.transform)
+
+        def yaw_input_law():
+            MIN_INPUT = .02
+            MAX_INPUT = .4
+            Kp = 1.0
+
+            err = target_angle- self.robot_odom.get_angle()
+            self.get_logger().debug(f'Angle error is {err}')
+
+            z = Kp * err
+            z = math.copysign(max(MIN_INPUT, abs(z)), z)            # min clamp
+            z = max(min(z, MAX_INPUT), -MAX_INPUT)                  # max clamp
+            
+            return Twist(
+                linear=Vector3(x=0.0, y=0.0, z=0.0),
+                angular=Vector3(x=0.0, y=0.0, z=z),
+            )
+
+        await self.vel_control.loop(
+            yaw_input_law,
+            lambda: abs(self.robot_odom.get_angle() - target_angle) < TOLL,
+        )
+
+        self.get_logger().info(f'Rotation terminated, angle should have been compensated.')
+
+
+        ### 5. If success, move forward to place forklift underneath pallet
+
+        ### 6. Lift forklift
+
+        ### 7. Assert package has been picked up
+
 
         result = PickupPallet.Result()
-        result.success = nav_result.result.success
+        result.success = True
         result.message = str(nav_result.result.error_msg)
 
-        if result.success:
-            goal_handle.succeed()
-        else:
-            goal_handle.abort()
+        goal_handle.succeed()
 
         return result
-    
-        ### 3. If success, move forward to place forklift underneath pallet
-
-        ### 4. Lift forklift
-
-        ### 5. Assert package has been picked up
 
 
 def main(args=None):
     rclpy.init(args=args)
 
     node = PickupServer()
+    node.get_logger().set_level(LoggingSeverity.DEBUG)
 
     try:
         rclpy.spin(node)

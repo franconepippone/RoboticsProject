@@ -1,11 +1,8 @@
-
+import numpy as np
 from geometry_msgs.msg import PoseStamped, TransformStamped
-
-from scipy.spatial.transform import Rotation
-
 import math
 
-from geometry_msgs.msg import PoseStamped, TransformStamped
+from geometry_msgs.msg import PoseStamped, TransformStamped, Transform
 
 
 def compute_staging_pose(
@@ -38,3 +35,29 @@ def compute_staging_pose(
     pose.pose.orientation.w = math.cos(yaw / 2.0)
 
     return pose
+
+
+def get_yaw_error(tag_transform: Transform) -> float:
+    """Compute the yaw error between the tag's orientation and the robot's orientation.
+    
+    'tag_transform' must be the raw april tag transform in the robot's base_link frame.
+    The transform's z axis must point orthogonal to the tag's surface, and the robot 'forward'
+    must be the x axis.
+
+    Since the tag points towards the robot during docking, to get true alignment the z axis versor is first flipped,
+    the projected onto the x-y plane and then the angle is measured.
+
+    The returned angle is in [-pi, pi] radians.
+    """
+    
+    q = tag_transform.rotation
+    x, y, z, w = q.x, q.y, q.z, q.w
+
+    # B's Z axis expressed in A, flipped
+    vx = -2.0 * (x*z + w*y)
+    vy = -2.0 * (y*z - w*x)
+
+    if np.hypot(vx, vy) < 1e-6:
+        raise ValueError("Projected vector is undefined")
+
+    return np.arctan2(vy, vx)
