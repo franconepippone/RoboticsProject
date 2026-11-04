@@ -9,6 +9,7 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.task import Future
 
 from nav2_msgs.action import DockRobot
+from nav2_msgs.action._dock_robot import DockRobot_GetResult_Response
 from custom_interfaces.action import PickupPallet
 
 from pallet_pickup.dock_pose_bridge import DockPoseBridge
@@ -21,7 +22,7 @@ class PickupServer(Node):
     def __init__(self):
         super().__init__('pickup_server')
 
-        self.pose_bridge = DockPoseBridge(node=self)
+        self.pose_bridge = DockPoseBridge(node=self, max_detection_age=5.0)
         self.tag_cache = TagTFCache(node=self)
 
         self.callback_group = ReentrantCallbackGroup()
@@ -40,7 +41,7 @@ class PickupServer(Node):
             callback_group=self.callback_group
         )
 
-        self.get_logger().info('Dock pallet action server ready')
+        self.get_logger().info('Pickup Pallet action server ready')
 
     @staticmethod
     def _build_abort_response(message: str) -> PickupPallet.Result:
@@ -71,7 +72,7 @@ class PickupServer(Node):
         if not isinstance(tag_id, int) or tag_id < 0:
             return self._build_abort_response(f'Invalid tag ID: {tag_id}')
         
-        transform = self.tag_cache.get_tag_frame(tag_id, 1.0) 
+        transform = self.tag_cache.get_tag_frame(tag_id, 5.0) 
         if transform is None:
             return self._build_abort_response(f'Tag not available or too old: {tag_id}')
 
@@ -91,7 +92,7 @@ class PickupServer(Node):
 
         goal.use_dock_id = False
 
-        goal.dock_pose = compute_staging_pose(transform, offset=0.8)
+        goal.dock_pose = compute_staging_pose(transform, offset=1.0)
         goal.dock_pose.header.frame_id = 'odom'
         goal.dock_pose.header.stamp = self.get_clock().now().to_msg()
 
@@ -110,14 +111,14 @@ class PickupServer(Node):
                 return self._build_abort_response('Nav2 rejected docking goal')
 
             result_future: Future = nav_goal_handle.get_result_async()
-            nav_result: DockRobot.Result = cast(DockRobot.Result, await result_future)
+            nav_result: DockRobot_GetResult_Response = cast(DockRobot_GetResult_Response, await result_future)
 
         self.get_logger().debug('Dock pose bridge disabled for tag {tag_id}')
         # outside ctxmng
 
         result = PickupPallet.Result()
-        result.success = nav_result.success
-        result.message = str(nav_result.error_msg)
+        result.success = nav_result.result.success
+        result.message = str(nav_result.result.error_msg)
 
         if result.success:
             goal_handle.succeed()

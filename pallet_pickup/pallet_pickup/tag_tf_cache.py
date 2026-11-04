@@ -47,10 +47,10 @@ class TagTFCache:
                 self.target_frame,
                 tag_frame,
                 Time(),
-                timeout=Duration(seconds=0.1),
+                timeout=Duration(seconds=1.0),
             )
         except Exception as ex:
-            self.node.get_logger().debug(
+            self.node.get_logger().warn(
                 f'Tag {tag_id} unavailable in {self.target_frame}: {ex}'
             )
             return None
@@ -65,7 +65,7 @@ class TagTFCache:
         ).nanoseconds / 1e9
 
         if age < 0.0 or age > max_age:
-            self.node.get_logger().debug(
+            self.node.get_logger().warn(
                 f'Tag {tag_id} transform is stale: age={age:.3f}s'
             )
             return None
