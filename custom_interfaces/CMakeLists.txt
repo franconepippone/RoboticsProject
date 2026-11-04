@@ -30,6 +30,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/ObstacleDetection.msg"
   "srv/GetTagPosition.srv"
   "action/PickupPallet.action"
+  "srv/MotionRequest.srv"
   DEPENDENCIES geometry_msgs std_msgs
 )
 

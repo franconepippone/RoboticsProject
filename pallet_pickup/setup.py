@@ -34,6 +34,7 @@ setup(
         'laser_obstacle_detector = pallet_pickup.laser_obstacle_detector:main',
         'dock_pose_bridge = pallet_pickup.dock_pose_bridge_node:main',
         'pickup_server = pallet_pickup.pickup_server_node:main',
+        'odometric_controller = pallet_pickup.control_utils.odometric_controller_node:main',
     ],
 },
 )

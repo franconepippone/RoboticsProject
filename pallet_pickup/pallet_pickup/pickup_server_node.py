@@ -17,8 +17,7 @@ from custom_interfaces.action import PickupPallet
 
 from pallet_pickup.dock_pose_bridge import DockPoseBridge
 from pallet_pickup.tag_tf_cache import TagTFCache
-from pallet_pickup.twist_controller import TwistController
-from pallet_pickup.planar_odometry_listener import PlanarOdometryListener
+from pallet_pickup.control_utils.odometric_planar_controller import OdometricPlanarController
 from pallet_pickup.utils import compute_staging_pose, get_yaw_error
 
 
@@ -35,12 +34,16 @@ class PickupServer(Node):
             node=self, 
             target_frame='odom'            # fixed frame of docking
         )
-        self.vel_control = TwistController(
+        self.robot_controller = OdometricPlanarController(
             node=self,
-            topic='/cmd_vel',
-            frequency=20
+            cmd_topic='/cmd_vel',
+            odom_topic='/odom',
+            frequency=20,
+
+            # drift coefficients (odom_movement : actual_movement ratio)
+            drift_linear_coeff=.7,
+            drift_rot_coeff=.7,
         )
-        self.robot_odom = PlanarOdometryListener(self)
 
         self.callback_group = ReentrantCallbackGroup()
 
@@ -159,47 +162,7 @@ class PickupServer(Node):
         error_rad = get_yaw_error(transform.transform)
         self.get_logger().info(f'Measured yaw error after docking of: {error_rad} radians')
 
-        DRIFT_COEFF = 0.6
-        TOLL = .001
-
-        starting_angle = self.robot_odom.get_angle()
-        target_angle = starting_angle + error_rad * DRIFT_COEFF
-
-        self.get_logger().debug(f'Starting angle is {starting_angle}rad, target is {target_angle}rad')
-
-        def error():
-            transform = self.tag_cache.get_tag_frame(
-                tag_id, 
-                max_age=5.0,
-                target_frame_override='base_link',  # we want the tag in base_link to compute yaw error 
-                timeout=5.0
-            ) 
-            if transform is None:
-                raise ValueError()
-        
-            return get_yaw_error(transform.transform)
-
-        def yaw_input_law():
-            MIN_INPUT = .02
-            MAX_INPUT = .4
-            Kp = 1.0
-
-            err = target_angle- self.robot_odom.get_angle()
-            self.get_logger().debug(f'Angle error is {err}')
-
-            z = Kp * err
-            z = math.copysign(max(MIN_INPUT, abs(z)), z)            # min clamp
-            z = max(min(z, MAX_INPUT), -MAX_INPUT)                  # max clamp
-            
-            return Twist(
-                linear=Vector3(x=0.0, y=0.0, z=0.0),
-                angular=Vector3(x=0.0, y=0.0, z=z),
-            )
-
-        await self.vel_control.loop(
-            yaw_input_law,
-            lambda: abs(self.robot_odom.get_angle() - target_angle) < TOLL,
-        )
+        await self.robot_controller.rotate_by(error_rad)
 
         self.get_logger().info(f'Rotation terminated, angle should have been compensated.')
 
