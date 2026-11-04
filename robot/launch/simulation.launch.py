@@ -64,7 +64,7 @@ def launch_setup(context, package_dir, launch_dir):
         PythonLaunchDescriptionSource(
             os.path.join(launch_dir, 'joy_control.launch.py')
         )
-    )
+    ) 
 
     if joypad: actions.append(joy_launch)
     if mode == 'slam': 
@@ -97,6 +97,13 @@ def launch_setup(context, package_dir, launch_dir):
                 os.path.join(launch_dir, 'gazebo.launch.py')
             ),
             launch_arguments={'world': world_path}.items(),
+        ),
+
+        # Drop Action Server
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                os.path.join(launch_dir, 'drop_action_server.launch.py')
+            )
         ),
 
         # Spawn robot after Gazebo starts
