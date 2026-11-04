@@ -11,7 +11,6 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.task import Future
 
 from nav2_msgs.action import DockRobot
-from geometry_msgs.msg import Twist, Vector3
 from nav2_msgs.action._dock_robot import DockRobot_GetResult_Response
 from custom_interfaces.action import PickupPallet
 
@@ -20,6 +19,7 @@ from pallet_pickup.tag_tf_cache import TagTFCache
 from pallet_pickup.control_utils.odometric_planar_controller import OdometricPlanarController
 from pallet_pickup.utils import compute_staging_pose, get_yaw_error
 
+from robot.forklift_api import ForkliftAPI
 
 class PickupServer(Node):
 
@@ -41,9 +41,10 @@ class PickupServer(Node):
             frequency=20,
 
             # drift coefficients (odom_movement : actual_movement ratio)
-            drift_linear_coeff=.7,
-            drift_rot_coeff=.7,
+            drift_linear_coeff=1.0,
+            drift_rot_coeff=.7,     # TODO: testing on this revealed a value close to 1 in sim. Why why need it this small here? Problem is prob somewhere else
         )
+        self.forklift_api = ForkliftAPI(self)
 
         self.callback_group = ReentrantCallbackGroup()
 
@@ -168,8 +169,16 @@ class PickupServer(Node):
 
 
         ### 5. If success, move forward to place forklift underneath pallet
+        self.get_logger().info(f'Moving robot underneath the pallet.')
 
+        DISTANCE = .35 #m
+
+        await self.robot_controller.forward_by(DISTANCE)
+    
         ### 6. Lift forklift
+        self.get_logger().info(f'Lifting forklift.')
+
+        self.forklift_api.lift()
 
         ### 7. Assert package has been picked up
 
