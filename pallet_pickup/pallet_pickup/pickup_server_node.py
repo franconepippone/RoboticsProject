@@ -109,14 +109,14 @@ class PickupServer(Node):
 
 
         ### ==============================================================
-        ### 0. Verify dependencies are available
+        ### 1. Verify dependencies are available
 
         if not self.dock_client.wait_for_server(timeout_sec=10.0):
             return _abort('Nav2 docking server unavailable')
 
 
         ### ==============================================================
-        ### 1. Validate tag ID and if tag ID is detected available and stable
+        ### 2. Validate tag ID and if tag ID is detected available and stable
 
         if resp := self._cancel_if_requested(goal_handle): return resp
 
@@ -142,7 +142,7 @@ class PickupServer(Node):
 
 
         ### ==============================================================
-        ### 2. Forward docking request to Nav2 docking server + enable dock pose bridge
+        ### 3. Forward docking request to Nav2 docking server + enable dock pose bridge
 
         if resp := self._cancel_if_requested(goal_handle): return resp
 
@@ -181,7 +181,7 @@ class PickupServer(Node):
 
 
         ### ==============================================================
-        ### 3. Fine tune yaw alignment manually
+        ### 4. Fine tune yaw alignment manually
 
         if resp := self._cancel_if_requested(goal_handle): return resp
 
@@ -206,9 +206,10 @@ class PickupServer(Node):
 
         self.get_logger().info(f'Rotation terminated, angle should have been compensated.')
 
+        # TODO assert that it's actually aligned now, otherwise return
 
         ### ==============================================================
-        ### 4. If success, move forward to place forklift underneath pallet
+        ### 5. If success, move forward to place forklift underneath pallet
 
         if resp := self._cancel_if_requested(goal_handle): return resp
         self.get_logger().info(f'Moving robot underneath the pallet.')
@@ -219,23 +220,23 @@ class PickupServer(Node):
 
 
         ### ==============================================================
-        ### 5. Lift forklift
+        ### 6. Lift forklift and move backwards
 
         if resp := self._cancel_if_requested(goal_handle): return resp
         self.get_logger().info(f'Lifting forklift.')
 
         self.forklift_api.lift()
 
-
-        ### ==============================================================
-        ### 6. Assert package has been picked up
-
-        if resp := self._cancel_if_requested(goal_handle): return resp
-
         # let forklift raise
         await asleep(self, 1.0, self.callback_group)
 
         await self.robot_controller.forward_by(-.3)
+
+        ### ==============================================================
+        ### 7. Assert package has been picked up
+
+        if resp := self._cancel_if_requested(goal_handle): return resp
+
 
         result = PickupPallet.Result()
         result.success = True
