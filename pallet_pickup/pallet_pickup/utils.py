@@ -1,4 +1,8 @@
 import numpy as np
+from rclpy.node import Node
+from rclpy.task import Future
+from rclpy.callback_groups import CallbackGroup
+
 from geometry_msgs.msg import PoseStamped, TransformStamped
 import math
 
@@ -61,3 +65,28 @@ def get_yaw_error(tag_transform: Transform) -> float:
         raise ValueError("Projected vector is undefined")
 
     return np.arctan2(vy, vx)
+
+
+
+
+async def asleep(
+    node: Node,
+    seconds: float,
+    cb_group: CallbackGroup | None = None
+) -> None:
+    future: Future = Future()
+
+    def wakeup() -> None:
+        if not future.done():
+            future.set_result(None)
+
+    timer = node.create_timer(
+        seconds,
+        wakeup,
+        callback_group=cb_group,
+    )
+
+    try:
+        await future
+    finally:
+        node.destroy_timer(timer)

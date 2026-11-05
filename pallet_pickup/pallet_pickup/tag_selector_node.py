@@ -9,7 +9,7 @@ from rclpy.node import Node
 from rclpy.subscription import Subscription
 from rclpy.service import Service
 
-from apriltag_msgs.msg import AprilTagDetectionArray
+from apriltag_msgs.msg import AprilTagDetectionArray, AprilTagDetection
 from custom_interfaces.srv import SelectTag
 
 import random
@@ -79,9 +79,14 @@ class AprilTagSelector(Node):
     ) -> None:
 
         now: int = self.get_clock().now().nanoseconds
-
+        
         for detection in msg.detections:
+            detection: AprilTagDetection
             tag_id: int = detection.id
+
+            if not isinstance(tag_id, int) or tag_id < 0:
+                self.get_logger().warning(f'Received an invalid tag id from april tag detection: {tag_id}')
+                continue
 
             # adds or overwrites 
             self.visible_tags[tag_id] = TrackedDetection(
@@ -110,9 +115,6 @@ class AprilTagSelector(Node):
         for tag_id in expired_ids:
             del self.visible_tags[tag_id]
 
-    # -----------------------------------------------------
-    # Selection service
-    # -----------------------------------------------------
 
     def select_tag_callback(
         self,

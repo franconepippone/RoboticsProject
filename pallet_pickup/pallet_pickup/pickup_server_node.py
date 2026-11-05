@@ -5,7 +5,7 @@ import rclpy
 from rclpy.impl.logging_severity import LoggingSeverity
 from rclpy.node import Node
 from rclpy.action import ActionClient, ActionServer
-from rclpy.action.server import ServerGoalHandle
+from rclpy.action.server import ServerGoalHandle, CancelResponse
 from rclpy.action.client import ClientGoalHandle
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.task import Future
@@ -17,7 +17,7 @@ from custom_interfaces.action import PickupPallet
 from pallet_pickup.dock_pose_bridge import DockPoseBridge
 from pallet_pickup.tag_tf_cache import TagTFCache
 from pallet_pickup.control_utils.odometric_planar_controller import OdometricPlanarController
-from pallet_pickup.utils import compute_staging_pose, get_yaw_error
+from pallet_pickup.utils import compute_staging_pose, get_yaw_error, asleep
 
 from robot.forklift_api import ForkliftAPI
 
@@ -59,6 +59,7 @@ class PickupServer(Node):
             PickupPallet,
             '/pickup_pallet',
             execute_callback=self.execute_callback,
+            cancel_callback=self.cancel_callback,
             callback_group=self.callback_group
         )
 
@@ -72,6 +73,29 @@ class PickupServer(Node):
         result.message = message
         return result
 
+    @staticmethod
+    def _build_cancel_response(message: str = '') -> PickupPallet.Result:
+        result = PickupPallet.Result()
+        result.success = False
+        result.message = 'Goal canceled ' + (f'due to: {message}' if message else '')
+        return result
+
+    def _cancel_if_requested(self, goal_handle: ServerGoalHandle, message: str= '') -> PickupPallet.Result | None:
+        """
+        Set action to canceled and returns failed action response if cancel was requested,
+        otherwise returns None. Can be used in a one-liner to check and execute cancellation:
+        
+        if response := _cancel_if_requested(..): return response
+        """
+        if goal_handle.is_cancel_requested:
+            self.get_logger().warning('Cancelling goal...')
+            goal_handle.canceled()
+            return self._build_cancel_response(message)
+
+    def cancel_callback(self, goal_handle: ServerGoalHandle) -> CancelResponse:
+        self.get_logger().info('Cancellation requested and accepted')
+        return CancelResponse.ACCEPT
+
     async def execute_callback(self, goal_handle: ServerGoalHandle):
         """Async cooroutine coordinating all steps involved in the pallet pickup process."""
 
@@ -83,15 +107,21 @@ class PickupServer(Node):
 
         self.get_logger().info('Received pallet docking request')
 
+
+        ### ==============================================================
         ### 0. Verify dependencies are available
 
         if not self.dock_client.wait_for_server(timeout_sec=10.0):
             return _abort('Nav2 docking server unavailable')
 
 
+        ### ==============================================================
         ### 1. Validate tag ID and if tag ID is detected available and stable
 
+        if resp := self._cancel_if_requested(goal_handle): return resp
+
         self.get_logger().info('Validating tag ID and availability')
+
 
         request: PickupPallet.Goal = goal_handle.request
         tag_id = request.tag_id
@@ -111,7 +141,10 @@ class PickupServer(Node):
         #    return result
 
 
+        ### ==============================================================
         ### 2. Forward docking request to Nav2 docking server + enable dock pose bridge
+
+        if resp := self._cancel_if_requested(goal_handle): return resp
 
         self.get_logger().info('Forwarding request to Nav2 docking server')
 
@@ -141,13 +174,16 @@ class PickupServer(Node):
             nav_result: DockRobot_GetResult_Response = cast(DockRobot_GetResult_Response, await result_future)
 
         # outside ctxmng
-        self.get_logger().debug('Dock pose bridge disabled for tag {tag_id}')
+        self.get_logger().debug(f'Dock pose bridge disabled for tag {tag_id}')
 
         if not nav_result.result.success:
             return _abort(f'Nav2 docking failed: {nav_result.result.error_msg} [{nav_result.result.error_code}]')
 
 
+        ### ==============================================================
         ### 3. Fine tune yaw alignment manually
+
+        if resp := self._cancel_if_requested(goal_handle): return resp
 
         self.get_logger().info('Fine tuning yaw aligment with respect to tag')
 
@@ -171,23 +207,35 @@ class PickupServer(Node):
         self.get_logger().info(f'Rotation terminated, angle should have been compensated.')
 
 
+        ### ==============================================================
         ### 4. If success, move forward to place forklift underneath pallet
+
+        if resp := self._cancel_if_requested(goal_handle): return resp
         self.get_logger().info(f'Moving robot underneath the pallet.')
 
         DISTANCE = .27 #m
 
         await self.robot_controller.forward_by(DISTANCE)
-    
+
+
+        ### ==============================================================
         ### 5. Lift forklift
+
+        if resp := self._cancel_if_requested(goal_handle): return resp
         self.get_logger().info(f'Lifting forklift.')
 
         self.forklift_api.lift()
 
+
+        ### ==============================================================
         ### 6. Assert package has been picked up
 
-        # TODO async wait for a bit
+        if resp := self._cancel_if_requested(goal_handle): return resp
 
-        await self.robot_controller.forward_by(-.5)
+        # let forklift raise
+        await asleep(self, 1.0, self.callback_group)
+
+        await self.robot_controller.forward_by(-.3)
 
         result = PickupPallet.Result()
         result.success = True
