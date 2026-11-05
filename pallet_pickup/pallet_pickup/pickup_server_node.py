@@ -156,14 +156,15 @@ class PickupServer(Node):
             max_age=5.0,
             target_frame_override='base_link',  # we want the tag in base_link to compute yaw error 
             timeout=5.0
-        ) 
+        )
+
         if transform is None:
             return _abort(f'Tag is undetectable for yaw fine tuning: {tag_id}')
         
         error_rad = get_yaw_error(transform.transform)
         self.get_logger().info(f'Measured yaw error after docking of: {error_rad} radians')
 
-        # rotate by the leftover aligment error after docking action to try to compensate it
+        # rotate by the leftover aligment error after docking completes, to try to compensate final yaw error
         # TODO this is not very reliable, probably due to a bad error_rad value
         await self.robot_controller.rotate_by(error_rad)
 

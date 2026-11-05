@@ -1,4 +1,3 @@
-import rclpy
 from rclpy.node import Node
 from rclpy.task import Future
 from geometry_msgs.msg import Twist

@@ -9,9 +9,7 @@ from .twist_controller import TwistController
 
 class OdometricPlanarController:
     """
-    Allows for simple closed-loop planar navigation of a robot taking Twist commands and 
-    publishing odometry messages.
-
+    Allows for simple closed-loop planar navigation of a robot using odometry feedback.
     """
 
     def __init__(

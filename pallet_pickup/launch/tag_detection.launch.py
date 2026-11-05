@@ -46,6 +46,14 @@ def generate_launch_description():
         parameters=[{'use_sim_time': use_sim_time}],
     )
 
+    # Exposes /select_tag service for choosing a tag among all visible ones.
+    tag_selector = Node(
+        package='pallet_pickup',
+        executable='tag_selector',
+        output='screen',
+        parameters=[{'use_sim_time': use_sim_time}],
+    )
+
     return LaunchDescription([
         DeclareLaunchArgument(
             'use_sim_time',
@@ -54,4 +62,5 @@ def generate_launch_description():
         ),
         camera_transform,
         apriltag_node,
+        tag_selector
     ])
