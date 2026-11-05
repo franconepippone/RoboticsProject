@@ -14,6 +14,7 @@ def generate_launch_description():
         robot_description = f.read()
 
     twist_mux_params = os.path.join(package_dir, 'config', 'twist_mux.yaml')
+    drive_mode_params = os.path.join(package_dir, 'config', 'drive_mode.yaml')
     
     return LaunchDescription([
 
@@ -26,6 +27,14 @@ def generate_launch_description():
                 'robot_description': robot_description,
                 'use_sim_time': True,
             }],
+            output='screen',
+        ),
+        
+        Node(
+            package='robot',
+            executable='drive_mode',
+            name='drive_mode',
+            parameters=[drive_mode_params],
             output='screen',
         ),
 

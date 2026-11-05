@@ -4,7 +4,7 @@ twist_mux:
     use_sim_time: true
     topics:
       navigation:
-        topic: cmd_vel
+        topic: cmd_vel_drive
         timeout: 0.5
         priority: 10
       joystick:

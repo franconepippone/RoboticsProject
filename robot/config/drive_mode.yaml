@@ -1,0 +1,10 @@
+drive_mode:
+  ros__parameters:
+    use_sim_time: true
+    # x1, y1, x2, y2, ... coordinates wrt base_link frame (forklift towards +x)
+    # Robot without package
+    footprint_empty: [-0.2, -0.15, -0.025, -0.2, 0.125, -0.2, 0.475, -0.11,
+                      0.475, 0.11, 0.125, 0.2, -0.025, 0.2, -0.2, 0.15]
+    # Robot with package        
+    footprint_loaded: [-0.2, -0.15, -0.025, -0.2, 0.125, -0.2, 0.51, -0.15,
+                       0.51, 0.15, 0.125, 0.2, -0.025, 0.2, -0.2, 0.15]

@@ -49,6 +49,7 @@ setup(
         'console_scripts': [
             'robot_joy_control = robot.robot_joy_control:main',
             'drop_action_server = robot.drop_action_server:main',
+            'drive_mode = robot.drive_mode:main',
         ],
     },
 )
