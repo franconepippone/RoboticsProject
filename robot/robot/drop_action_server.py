@@ -1,4 +1,5 @@
 import time
+import math
 import rclpy
 from rclpy.action import ActionServer
 from rclpy.node import Node
@@ -8,7 +9,7 @@ from robot.forklift_api import ForkliftAPI
 
 class DropActionServer(Node):
 
-    def __init__(self, linear_x=-0.2, duration=3.0, package_num=None, delivery_zone_id=None):
+    def __init__(self, linear_x=0.2, duration=5.0, package_num=None, delivery_zone_id=None):
         super().__init__('drop_action_server')
 
         self.package_num = package_num
@@ -42,6 +43,35 @@ class DropActionServer(Node):
 
         # Initialize Feedback Message
         feedback_msg = DropPackage.Feedback()
+
+        # Rotate 180 degrees - Robot arrives backwards
+        feedback_msg.status = 'Aligning with delivery pose...'
+        self.get_logger().info(feedback_msg.status)
+        goal_handle.publish_feedback(feedback_msg)
+
+        angular_z = 0.5
+        msg = Twist()
+        msg.angular.z = angular_z
+        start_time = self.get_clock().now()
+        duration = rclpy.duration.Duration(seconds=math.pi / angular_z)
+        while (self.get_clock().now() - start_time) < duration:
+            self.cmd_vel_pub.publish(msg)
+            time.sleep(0.05)
+        self.cmd_vel_pub.publish(Twist())
+
+        # Move forward to reach delivery spot - 1m away
+        feedback_msg.status = 'Moving to delivery position...'
+        self.get_logger().info(feedback_msg.status)
+        goal_handle.publish_feedback(feedback_msg)
+
+        msg = Twist()
+        msg.linear.x = -self.linear_x # Carrying is true => drive_mode node inverts
+        start_time = self.get_clock().now()
+        duration = rclpy.duration.Duration(seconds=self.duration)
+        while (self.get_clock().now() - start_time) < duration:
+            self.cmd_vel_pub.publish(msg)
+            time.sleep(0.05)
+        self.cmd_vel_pub.publish(Twist())
         
         # Lower Forklift
         feedback_msg.status = 'Lowering forklift...'
@@ -55,7 +85,7 @@ class DropActionServer(Node):
         goal_handle.publish_feedback(feedback_msg)
 
         msg = Twist()
-        msg.linear.x = self.linear_x
+        msg.linear.x = -self.linear_x
         start_time = self.get_clock().now()
         duration = rclpy.duration.Duration(seconds=self.duration)
         while (self.get_clock().now() - start_time) < duration:
