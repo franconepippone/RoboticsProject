@@ -22,11 +22,11 @@ class ForkliftAPI:
         msg = Float64()
         msg.data = 0.5
         self.publisher.publish(msg)
-        self.host_node.get_logger().info('Forklift grab command: 0.5')
+        self.host_node.get_logger().debug('Forklift grab command: 0.5')
 
     def lower(self):
         """Lowers the forklift. Grabbed packages will be deposited."""
         msg = Float64()
         msg.data = 0.0
         self.publisher.publish(msg)
-        self.host_node.get_logger().info('Forklift release command: 0.0')
+        self.host_node.get_logger().debug('Forklift release command: 0.0')

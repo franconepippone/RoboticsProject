@@ -147,7 +147,7 @@ class PickupServer(Node):
             return _abort(f'Nav2 docking failed: {nav_result.result.error_msg} [{nav_result.result.error_code}]')
 
 
-        ### 4. Fine tune yaw alignment manually
+        ### 3. Fine tune yaw alignment manually
 
         self.get_logger().info('Fine tuning yaw aligment with respect to tag')
 
@@ -163,25 +163,30 @@ class PickupServer(Node):
         error_rad = get_yaw_error(transform.transform)
         self.get_logger().info(f'Measured yaw error after docking of: {error_rad} radians')
 
+        # rotate by the leftover aligment error after docking action to try to compensate it
+        # TODO this is not very reliable, probably due to a bad error_rad value
         await self.robot_controller.rotate_by(error_rad)
 
         self.get_logger().info(f'Rotation terminated, angle should have been compensated.')
 
 
-        ### 5. If success, move forward to place forklift underneath pallet
+        ### 4. If success, move forward to place forklift underneath pallet
         self.get_logger().info(f'Moving robot underneath the pallet.')
 
-        DISTANCE = .35 #m
+        DISTANCE = .27 #m
 
         await self.robot_controller.forward_by(DISTANCE)
     
-        ### 6. Lift forklift
+        ### 5. Lift forklift
         self.get_logger().info(f'Lifting forklift.')
 
         self.forklift_api.lift()
 
-        ### 7. Assert package has been picked up
+        ### 6. Assert package has been picked up
 
+        # TODO async wait for a bit
+
+        await self.robot_controller.forward_by(-.5)
 
         result = PickupPallet.Result()
         result.success = True
