@@ -6,6 +6,7 @@ Exposes:
 - **/pickup_pallet** (*Action*) (type: custom_interfaces/action/PickupPallet)
 - **/select_tag** (*Service*) (type: custom_interfaces/srv/SelectTag)   
 
+The launch file `pickup_server.launch.py` is the main entry point. It's already included in `robot/launch/essentials.launch.py`, meaning that everything should already launch together with the simulation.
 
 
 ## */pickup_pallet* usage

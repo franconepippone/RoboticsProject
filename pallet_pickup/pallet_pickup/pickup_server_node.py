@@ -234,6 +234,7 @@ class PickupServer(Node):
 
         ### ==============================================================
         ### 7. Assert package has been picked up
+        # TODO
 
         if resp := self._cancel_if_requested(goal_handle): return resp
 
