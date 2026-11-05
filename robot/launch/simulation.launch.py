@@ -102,7 +102,8 @@ def launch_setup(context, package_dir, launch_dir):
         # Drop Action Server
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
-                os.path.join(launch_dir, 'drop_action_server.launch.py')
+                os.path.join(get_package_share_directory('drop_action'),
++                             'launch', 'drop_action_server.launch.py')
             )
         ),
 

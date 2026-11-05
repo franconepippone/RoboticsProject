@@ -4,7 +4,7 @@ from launch import LaunchDescription
 def generate_launch_description():
 
     drop_action_node = Node(
-        package='robot',  
+        package='drop_action',  
         executable='drop_action_server',  
         name='drop_action_server',        
         output='screen'            

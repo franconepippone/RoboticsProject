@@ -5,7 +5,7 @@ from rclpy.action import ActionServer
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from custom_interfaces.action import DropPackage
-from robot.forklift_api import ForkliftAPI
+from robot.robot.forklift_api import ForkliftAPI
 
 class DropActionServer(Node):
 
