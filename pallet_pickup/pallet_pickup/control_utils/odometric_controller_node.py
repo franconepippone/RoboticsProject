@@ -21,7 +21,7 @@ class OdometricControllerNode(Node):
 
         # Topics and execution frequency
         self.declare_parameter('cmd_topic', '/cmd_vel')
-        self.declare_parameter('odom_topic', '/odom')
+        self.declare_parameter('odom_topic', '/odom_nav')
         self.declare_parameter('frequency', 20.0)
 
         # Drift compensation

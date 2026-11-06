@@ -37,7 +37,7 @@ class PickupServer(Node):
         self.robot_controller = OdometricPlanarController(
             node=self,
             cmd_topic='/cmd_vel',
-            odom_topic='/odom',
+            odom_topic='/odom_nav',
             frequency=20,
 
             # drift coefficients (odom_movement : actual_movement ratio)
@@ -230,7 +230,7 @@ class PickupServer(Node):
         # let forklift raise
         await asleep(self, 1.0, self.callback_group)
 
-        await self.robot_controller.forward_by(-.3)
+        await self.robot_controller.forward_by(.3)
 
         ### ==============================================================
         ### 7. Assert package has been picked up

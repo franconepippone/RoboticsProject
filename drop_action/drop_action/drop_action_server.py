@@ -1,11 +1,12 @@
-import time
 import math
 import rclpy
 from rclpy.action import ActionServer
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
+from rclpy.duration import Duration
+from rclpy.task import Future
 from custom_interfaces.action import DropPackage
-from robot.robot.forklift_api import ForkliftAPI
+from robot.forklift_api import ForkliftAPI
 
 class DropActionServer(Node):
 
@@ -37,7 +38,7 @@ class DropActionServer(Node):
             10)
         self.get_logger().info('Drop Action Server waiting for requests...')
 
-    def execute_callback(self, goal_handle):
+    async def execute_callback(self, goal_handle):
         self.get_logger().info('Received request to drop package. Starting operation...')
         self.get_logger().info(f"Package is number {self.package_num} in delivery zone {self.delivery_zone_id}.")
 
@@ -52,12 +53,7 @@ class DropActionServer(Node):
         angular_z = 0.5
         msg = Twist()
         msg.angular.z = angular_z
-        start_time = self.get_clock().now()
-        duration = rclpy.duration.Duration(seconds=math.pi / angular_z)
-        while (self.get_clock().now() - start_time) < duration:
-            self.cmd_vel_pub.publish(msg)
-            time.sleep(0.05)
-        self.cmd_vel_pub.publish(Twist())
+        await self._publish_for(msg, math.pi / 0.5)
 
         # Move forward to reach delivery spot - 1m away
         feedback_msg.status = 'Moving to delivery position...'
@@ -66,12 +62,7 @@ class DropActionServer(Node):
 
         msg = Twist()
         msg.linear.x = -self.linear_x # Carrying is true => drive_mode node inverts
-        start_time = self.get_clock().now()
-        duration = rclpy.duration.Duration(seconds=self.duration)
-        while (self.get_clock().now() - start_time) < duration:
-            self.cmd_vel_pub.publish(msg)
-            time.sleep(0.05)
-        self.cmd_vel_pub.publish(Twist())
+        await self._publish_for(msg, self.duration)
         
         # Lower Forklift
         feedback_msg.status = 'Lowering forklift...'
@@ -86,13 +77,8 @@ class DropActionServer(Node):
 
         msg = Twist()
         msg.linear.x = -self.linear_x
-        start_time = self.get_clock().now()
-        duration = rclpy.duration.Duration(seconds=self.duration)
-        while (self.get_clock().now() - start_time) < duration:
-            self.cmd_vel_pub.publish(msg)
-            time.sleep(0.05)
-        self.cmd_vel_pub.publish(Twist())
-
+        await self._publish_for(msg, self.duration)
+        
         # Conclude Goal
         goal_handle.succeed()
 
@@ -103,6 +89,26 @@ class DropActionServer(Node):
         self.get_logger().info(result.message)
 
         return result
+
+    async def _publish_for(self, msg, seconds, period=0.05):
+        """Publish msg for `seconds` simulation time, then stop."""
+        done = Future()
+        start = self.get_clock().now()
+        limit = Duration(seconds=seconds)
+
+        def tick():
+            if self.get_clock().now() - start >= limit:
+                if not done.done():
+                    done.set_result(None)
+                return
+            self.cmd_vel_pub.publish(msg)
+
+        timer = self.create_timer(period, tick)
+        try:
+           await done     
+        finally:
+            self.destroy_timer(timer)
+            self.cmd_vel_pub.publish(Twist())
 
 def main(args=None):
     rclpy.init(args=args)

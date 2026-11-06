@@ -15,6 +15,7 @@
 
   <exec_depend>apriltag_ros</exec_depend>
   <exec_depend>apriltag_msgs</exec_depend>
+  <exec_depend>robot</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

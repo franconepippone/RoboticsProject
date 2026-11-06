@@ -1,5 +1,6 @@
 scan_filter_chain:
   ros__parameters:
+    use_sim_time: true
     filter1:
       name: range
       type: laser_filters/LaserScanRangeFilter
