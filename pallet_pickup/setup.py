@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 import os
 from glob import glob
 
-package_name = 'april_tag_detection'
+package_name = 'pallet_pickup'
 
 setup(
     name=package_name,
@@ -12,19 +12,13 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        (os.path.join('share', package_name, 'config'),
+         glob('config/*.*')),
         (os.path.join('share', package_name, 'launch'),
-            glob('launch/*.launch.py')),
-        (os.path.join('share', package_name, 'rviz'),
-            glob('rviz/*.rviz')),
-        (os.path.join('share', package_name, 'srv'),
-            glob('srv/*.srv')),
+         glob('launch/*.launch.py')),
+        
     ],
-    install_requires=[
-        'setuptools',
-        'numpy',
-        'opencv-python',
-        'pupil-apriltags',
-    ],
+    install_requires=['setuptools'],
     zip_safe=True,
     maintainer='americo',
     maintainer_email='americo.cherubini2003@gmail.com',
@@ -36,10 +30,12 @@ setup(
         ],
     },
     entry_points={
-        'console_scripts': [
-            # This defines the "executable" name
-            f'start_detection = {package_name}.april_tag_detector:main',
-            f'start_tag_mapping = {package_name}.april_tag_mapper:main'
-        ],
-    },
+    'console_scripts': [
+        'laser_obstacle_detector = pallet_pickup.laser_obstacle_detector:main',
+        'dock_pose_bridge = pallet_pickup.dock_pose_bridge_node:main',
+        'pickup_server = pallet_pickup.pickup_server_node:main',
+        'odometric_controller = pallet_pickup.control_utils.odometric_controller_node:main',
+        'tag_selector = pallet_pickup.tag_selector_node:main',
+    ],
+},
 )

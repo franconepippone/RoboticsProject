@@ -6,7 +6,10 @@ from launch_ros.actions import Node
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 
-
+from launch.actions import (
+    IncludeLaunchDescription
+)
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 def generate_launch_description():
     package_dir = get_package_share_directory('robot')
@@ -16,9 +19,15 @@ def generate_launch_description():
         robot_description = f.read()
 
     twist_mux_params = os.path.join(package_dir, 'config', 'twist_mux.yaml')
+
     drive_mode_launch = os.path.join(
         get_package_share_directory('drive_mode'), 'launch', 'drive_mode_node.launch.py')
     
+    mode = 2
+    # pickup server paths
+    pickup_dir = get_package_share_directory('pallet_pickup')
+    pickup_server_launch_file = os.path.join(pickup_dir, 'launch', 'pickup_server.launch.py')
+
     return LaunchDescription([
 
         # publish robot and joint state
@@ -42,4 +51,10 @@ def generate_launch_description():
         ),
 
         IncludeLaunchDescription(PythonLaunchDescriptionSource(drive_mode_launch)),
+
+        # Pallet pickup server
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(pickup_server_launch_file),
+            launch_arguments={'use_sim_time': 'true'}.items()
+        )
     ])

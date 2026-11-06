@@ -1,0 +1,6 @@
+std_msgs/Header header
+bool valid
+bool obstacle_present
+float32 confidence
+uint32 obstacle_ray_count
+uint32 total_ray_count
