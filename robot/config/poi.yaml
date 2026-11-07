@@ -3,9 +3,9 @@
 
     dock_location:
       position:
-          x: 4.7
-          y: 7.7
-          z: 0.0
+        x: 0.0
+        y: 0.0
+        z: 0.0
       orientation:
         x: 0.0
         y: 0.0
@@ -14,9 +14,9 @@
     
     storage_location:
       position:
-          x: 4.7
-          y: 7.7
-          z: 0.0
+        x: 0.0
+        y: 0.0
+        z: 0.0
       orientation:
         x: 0.0
         y: 0.0
