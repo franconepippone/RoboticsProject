@@ -1,28 +1,31 @@
 #!/usr/bin/env python3
-import rclpy
 import tf2_ros
 import py_trees
-import py_trees_ros
-from geometry_msgs.msg import Twist
+from rclpy.duration import Duration
 from irobot_create_msgs.action import Dock, Undock
 from irobot_create_msgs.msg import DockStatus
-from nav2_msgs.action import NavigateToPose
-from nav2_simple_commander.robot_navigator import BasicNavigator
-from rclpy.duration import Duration
-from rclpy.time import Time
 from sensor_msgs.msg import BatteryState
+from rclpy.time import Time
+
+# TODO(charging)
+# import Dock/Undock actions and DockStatus msg once they are defined
+# from sensor_msgs.msg import BatteryState
 
 from custom_interfaces.action import PickupPallet, GoTo, DropPackage 
 from custom_interfaces.srv import SelectTag 
 
-from helpers import make_pose, pose_from_params, nav_goal
-from bt_generic_blocks import BBBehaviour, TopicToBlackboard, ActionCall, ServiceCall, SETUP_WAIT_SEC
+from autonomy.helpers import make_pose
+from autonomy.bt_generic_blocks import BBBehaviour, TopicToBlackboard, ActionCall, SETUP_WAIT_SEC
 
 Status = py_trees.common.Status
 Access = py_trees.common.Access
 
 BATTERY_LOW = 0.30      # Threshold to check when starting a delivery cycle
 BATTERY_FULL = 1.00     # Threshold to consider the robot charged
+BATTERY_DRAIN_RATE = 0.002   # 1/s of sim time while working
+BATTERY_CHARGE_RATE = 0.02   # 1/s of sim time while charging
+
+N_ZONES = 4
 
 # =============== #
 # Condition Nodes #
@@ -66,12 +69,19 @@ class IsUndocked(BBBehaviour):
         return Status.FAILURE if docked else Status.SUCCESS
 
 class TFReady(py_trees.behaviour.Behaviour):
-    """RUNNING until (target, source) TF are available."""
-
-    def __init__(self, name, buffer, pairs):
+    """RUNNING until (target, source) TF are available.
+       Creates its own TF buffer/listener in setup() using the node passed by the tree."""
+ 
+    def __init__(self, name, pairs):
         super().__init__(name)
-        self.buffer, self.pairs = buffer, pairs
-
+        self.pairs = pairs
+        self.buffer, self._listener = None, None
+ 
+    def setup(self, **kwargs):
+        node = kwargs["node"]
+        self.buffer = tf2_ros.Buffer()
+        self._listener = tf2_ros.TransformListener(self.buffer, node)
+ 
     def update(self):
         for target, source in self.pairs:
             if not self.buffer.can_transform(target, source, Time()):
@@ -83,36 +93,49 @@ class TFReady(py_trees.behaviour.Behaviour):
 # ============ #
 # Action Nodes #
 # ============ #
+class ScanTag(BBBehaviour):
+    """Calls /select_tag until a tag is visible. After `timeout_sec` without tags: mission ends."""
 
-class ManualMove(BBBehaviour):
-    """Publish Twist on /cmd_vel for `duration_sec` seconds"""
-
-    def __init__(self, name, linear_x, duration_sec):
-        super().__init__(name)
-        self.linear_x, self.duration = linear_x, Duration(seconds=duration_sec)
-        self.pub, self._start = None, None
+    def __init__(self, name="ScanTag", timeout_sec=10.0, retry_sec=1.0):
+        super().__init__(name, writes=["target_tag_id", "delivery_zone", "mission_end_reason"])
+        self.timeout, self.retry = Duration(seconds=timeout_sec), Duration(seconds=retry_sec)
+        self.client, self._future, self._start, self._last = None, None, None, None
 
     def setup(self, **kwargs):
         super().setup(**kwargs)
-        self.pub = self.node.create_publisher(Twist, "/cmd_vel", 10)
+        self.client = self.node.create_client(SelectTag, "/select_tag")
+        if not self.client.wait_for_service(timeout_sec=SETUP_WAIT_SEC):
+            raise RuntimeError(f"[{self.name}] service '/select_tag' not available")
 
     def initialise(self):
+        self._future, self._last = None, None
         self._start = self.node.get_clock().now()
-        self.node.get_logger().info(f"[{self.name}] v={self.linear_x} m/s")
+        self.node.get_logger().info("Scanning packages AprilTags for info...")
 
     def update(self):
-        if (self.node.get_clock().now() - self._start) >= self.duration:
-            self.pub.publish(Twist())
-            return Status.SUCCESS
-        twist = Twist()
-        twist.linear.x = self.linear_x
-        self.pub.publish(twist)
-        return Status.RUNNING
+        now = self.node.get_clock().now()
 
-    def terminate(self, new_status):
-        # If interrupted stop the robot
-        if new_status == Status.INVALID and self.pub is not None:
-            self.pub.publish(Twist())
+        if self._future is None:
+            if self._last is None or now - self._last >= self.retry:
+                self._future, self._last = self.client.call_async(SelectTag.Request()), now
+            return Status.RUNNING
+        
+        if not self._future.done():
+            return Status.RUNNING
+        
+        res, self._future = self._future.result(), None
+        if res.success:
+            self.bb.set("target_tag_id", res.tag_id)
+            self.bb.set("delivery_zone", f"delivery_zone_{res.tag_id % N_ZONES}")
+            self.feedback_message = f"Tag {res.tag_id} selected"
+            return Status.SUCCESS
+        
+        if now - self._start >= self.timeout:
+            self.bb.set("mission_end_reason", "no_more_packages")
+            self.feedback_message = "No tag visible"
+            return Status.FAILURE
+        
+        return Status.RUNNING
 
 class IncrementCounter(BBBehaviour):
     """Increments the slot counter of `delivery_zone` once a package has been dropped."""
@@ -143,15 +166,15 @@ class ReportEnd(BBBehaviour):
         self.node.get_logger().error("--- Mission aborted: some node of the cycle failed. ---")
         return Status.FAILURE
 
-def navigate(name, make_goal, reads=()):
-    return ActionCall(
-        name, NavigateToPose, "navigate_to_pose", make_goal, reads=reads,
-        format_feedback=lambda fb: f"{fb.feedback.distance_remaining:.2f} m remaining")
-
 # ========== #
 # Build Tree #
 # ========== #
-def create_root(tf_buffer, storage_pose, dock_pose):
+def create_root(tf_buffer):
+
+    # Slot counters per delivery zone
+    init = py_trees.blackboard.Client(name="BTInit")
+    init.register_key("delivery_counters", access=Access.WRITE)
+    init.delivery_counters = {f"delivery_zone_{i}": 0 for i in range(N_ZONES)}
 
     # Write perceptions from topics to blackboard
     topics2bb = py_trees.composites.Sequence(name="Topics2BB", memory=False)
@@ -166,7 +189,9 @@ def create_root(tf_buffer, storage_pose, dock_pose):
     # If not ok go to dock station, dock and charge
     charge = py_trees.composites.Sequence(name="Charge", memory=True)
     charge.add_children([
-        navigate("GoToDock", lambda _bb: nav_goal(dock_pose)),
+        ActionCall("GoToDock", GoTo, "/go_to",
+                   lambda _bb: GoTo.Goal(poi_name="dock_location", slot_index=0),
+                   format_feedback=lambda fb: fb.feedback.status),
         ActionCall("Dock", Dock, "/dock", lambda _bb: Dock.Goal()),
         py_trees.behaviours.Running(name="Charging"),   # until BatteryOK not return SUCCESS
     ])
@@ -181,10 +206,13 @@ def create_root(tf_buffer, storage_pose, dock_pose):
     # Go to storage, scand tags to choose package and pick one
     pickup_package = py_trees.composites.Sequence(name="PickupPackage", memory=True)
     pickup_package.add_children([
-        navigate("GoToStorage", lambda _bb: nav_goal(storage_pose)),
-        ServiceCall("SelectTag", SelectTag, "/custom_services/srv/SelectTag", TODO),
-        ActionCall("PickupPackage", PickupPallet, "/custom_services/action/PickupPallet", TODO),
-        py_trees.behaviours.Running(name="Picking Package..."),
+        ActionCall("GoToStorage", GoTo, "/go_to",
+                   lambda _bb: GoTo.Goal(poi_name="storage_location", slot_index=0),
+                   format_feedback=lambda fb: fb.feedback.status),
+        ScanTag(),
+        ActionCall("PickupPackage", PickupPallet, "/pickup_pallet",
+                   lambda bb: PickupPallet.Goal(tag_id=bb.get("target_tag_id")),
+                   reads=["target_tag_id"]),
     ])
 
     # Go to delivery zone and drop package
@@ -220,79 +248,3 @@ def create_root(tf_buffer, storage_pose, dock_pose):
     )
     root.add_children([topics2bb, mission])
     return root
-
-def main(args=None):
-    
-    # ============= Bootstrap ============== #
-    # - Wait for TF and Nav2 Services       #
-    # - Build PoseStamped objs for fixed POI #
-    # ====================================== #
-
-    rclpy.init(args=args)
-    node = rclpy.create_node("autonomy_node", automatically_declare_parameters_from_overrides=True)
-    log = node.get_logger()
-
-    log.info("=== BT SUPERVISOR: Bootstrap ===")
-    tf_buffer = tf2_ros.Buffer()
-    tf_listener = tf2_ros.TransformListener(tf_buffer, node)
-    log.info("Waiting for odometry TF (odom -> base_link)...")
-    while rclpy.ok() and not tf_buffer.can_transform("odom", "base_link", Time()):
-        rclpy.spin_once(node, timeout_sec=0.5)
-
-    # Build POI PoseStamped objs
-    initial_pose = pose_from_params(node, "initial_pose")
-    if initial_pose is None:
-        log.warn("Initial pose not given in YAML. Using default (0.0, 0.0, 0.0)")
-        initial_pose = make_pose(0.0, 0.0, 0.0)
-
-    storage_pose = pose_from_params(node, "storage_location")
-    if storage_pose is None:
-        log.warn("Storage location not given in YAML. Using default (5.0, 0.0, 0.0)")
-        storage_pose = make_pose(5.0, 0.0, 0.0)
-
-    dock_pose = pose_from_params(node, "dock_location")
-    if dock_pose is None:
-        log.warn("dock_location not given in YAML. Using initial_pose as dock location pose")
-        dock_pose = initial_pose
-
-    navigator = BasicNavigator()
-    initial_pose.header.stamp = node.get_clock().now().to_msg()
-    navigator.setInitialPose(initial_pose)
-    log.info("Waiting for Nav2 stack to become ACTIVE...")
-    navigator.waitUntilNav2Active()
-    navigator.destroy_node()          # Nav2 only used via action nodes
-
-    # =========== Behavior Tree ========== #
-    tree = py_trees_ros.trees.BehaviourTree(
-        root=create_root(tf_buffer, storage_pose, dock_pose),
-        unicode_tree_debug=False,
-    )
-    try:
-        tree.setup(node=node, timeout=SETUP_WAIT_SEC)
-    except Exception as e:
-        log.error(f"Setup dell'albero fallito: {e}")
-        tree.shutdown()
-        if rclpy.ok():
-            rclpy.shutdown()
-        return
-
-    # =========== Mission ========== #
-    finished = []
-    tree.add_post_tick_handler(
-        lambda t: finished.append(t.root.status) if t.root.status in (Status.SUCCESS, Status.FAILURE) else None
-    )
-    log.info("=== SYSTEM FULLY INITIALIZED: Starting Mission ===")
-    tree.tick_tock(period_ms=50.0)    # 20 Hz
-
-    try:
-        while rclpy.ok() and not finished:
-            rclpy.spin_once(node, timeout_sec=0.1)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        tree.shutdown()
-        if rclpy.ok():
-            rclpy.shutdown()
-
-if __name__ == "__main__":
-    main()

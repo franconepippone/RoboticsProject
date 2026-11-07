@@ -234,8 +234,8 @@ class GoToServer(Node):
         q = pose.pose.orientation
         yaw = 2.0 * math.atan2(q.z, q.w) # planar orientation
 
-        # Drop pose of slot n: zones 1,2 shift towards +x, zones 3,4 towards -x
-        direction = 1.0 if zone_num in (1, 2) else -1.0
+        # Drop pose of slot n: zones 0,1 shift towards +x, zones 2,3 towards -x
+        direction = 1.0 if zone_num in (0, 1) else -1.0
         pose.pose.position.x += direction * n * self.slot_spacing
 
         # Staging pose: `staging_distance` BEHIND the drop pose, along the drop heading
