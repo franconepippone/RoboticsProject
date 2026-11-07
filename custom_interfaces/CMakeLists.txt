@@ -35,6 +35,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/MotionRequest.srv"
   "srv/SelectTag.srv"
   "action/DropPackage.action"
+  "action/GoTo.action"
   DEPENDENCIES geometry_msgs std_msgs action_msgs
 )
 

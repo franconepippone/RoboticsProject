@@ -20,10 +20,12 @@ def generate_launch_description():
 
     twist_mux_params = os.path.join(package_dir, 'config', 'twist_mux.yaml')
 
+    go_to_server_launch = os.path.join(
+            get_package_share_directory('go_to_action'), 'launch', 'goto_action_server.launch.py')
+
     drive_mode_launch = os.path.join(
         get_package_share_directory('drive_mode'), 'launch', 'drive_mode_node.launch.py')
     
-    mode = 2
     # pickup server paths
     pickup_dir = get_package_share_directory('pallet_pickup')
     pickup_server_launch_file = os.path.join(pickup_dir, 'launch', 'pickup_server.launch.py')
@@ -50,6 +52,7 @@ def generate_launch_description():
             output='screen'
         ),
 
+        IncludeLaunchDescription(PythonLaunchDescriptionSource(go_to_server_launch)),
         IncludeLaunchDescription(PythonLaunchDescriptionSource(drive_mode_launch)),
 
         # Pallet pickup server

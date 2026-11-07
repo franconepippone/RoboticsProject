@@ -1,8 +1,30 @@
 /**:
   ros__parameters:
 
+    dock_location:
+      position:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      orientation:
+        x: 0.0
+        y: 0.0
+        z: 0.7071068
+        w: 0.7071068
+    
+    storage_location:
+      position:
+        x: 0.0
+        y: 0.0
+        z: 0.0
+      orientation:
+        x: 0.0
+        y: 0.0
+        z: 0.7071068
+        w: 0.7071068
+
     delivery_locations:
-      tag_1:
+      delivery_zone_1:
         position:
           x: 4.7
           y: 7.7
@@ -12,7 +34,7 @@
           y: 0.0
           z: 0.7071068
           w: 0.7071068
-      tag_2:
+      delivery_zone_2:
         position:
           x: 4.7
           y: -7.0
@@ -22,7 +44,7 @@
           y: 0.0
           z: -0.7071068
           w: 0.7071068
-      tag_3:
+      delivery_zone_3:
         position:
           x: -4.7
           y: -7.0
@@ -32,7 +54,7 @@
           y: 0.0
           z: -0.7071068
           w: 0.7071068
-      tag_4:
+      delivery_zone_4:
         position:
           x: -4.7
           y: 7.7
