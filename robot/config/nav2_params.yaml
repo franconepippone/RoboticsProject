@@ -417,8 +417,8 @@ docking_server:
     dock_backwards: false
     dock_prestaging_tolerance: 0.1
 
-        # Types of docks
-    dock_plugins: ['pallet_dock']
+    # Types of docks
+    dock_plugins: ['pallet_dock', 'charging_dock']
 
     pallet_dock:
       plugin: 'opennav_docking::SimpleNonChargingDock'
@@ -438,6 +438,22 @@ docking_server:
       external_detection_rotation_yaw: 0.0
 
       filter_coef: 0.1
+
+    charging_dock:
+      plugin: 'opennav_docking::SimpleChargingDock'
+      docking_threshold: 0.05
+      staging_x_offset: -0.8        # staging pose 0.8 m behind center along dock orientation
+      staging_yaw_offset: 0.0
+      use_external_detection_pose: false
+      use_battery_status: true
+      charging_threshold: 0.5       # A: `current` of battery above this threshold means charging
+      use_stall_detection: false
+    
+    docks: ['home_dock']
+    home_dock:
+      type: 'charging_dock'
+      frame: map
+      pose: [0.0, 0.0, 0.0] 
 
     # Dock instances
     # The following example illustrates configuring dock instances.
