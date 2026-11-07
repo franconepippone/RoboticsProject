@@ -12,7 +12,7 @@ from rclpy.duration import Duration
 from rclpy.time import Time
 from sensor_msgs.msg import BatteryState
 
-from custom_interfaces.action import PickupPallet, GoToDeliveryZone, DropPackage 
+from custom_interfaces.action import PickupPallet, GoTo, DropPackage 
 from custom_interfaces.srv import SelectTag 
 
 from helpers import make_pose, pose_from_params, nav_goal
@@ -112,7 +112,23 @@ class ManualMove(BBBehaviour):
     def terminate(self, new_status):
         # If interrupted stop the robot
         if new_status == Status.INVALID and self.pub is not None:
-            self.pub.publish(Twist())  
+            self.pub.publish(Twist())
+
+class IncrementCounter(BBBehaviour):
+    """Increments the slot counter of `delivery_zone` once a package has been dropped."""
+
+    def __init__(self, name="IncrementCounter"):
+        super().__init__(name, reads=["delivery_zone", "delivery_counters"], writes=["delivery_counters"])
+
+    def update(self):
+        zone = self.bb_get("delivery_zone")
+        counters = self.bb_get("delivery_counters")
+        if zone is None or counters is None:
+            return Status.FAILURE
+        counters = dict(counters)       # new dict so the blackboard sees a write
+        counters[zone] += 1
+        self.bb.set("delivery_counters", counters)
+        return Status.SUCCESS  
 
 class ReportEnd(BBBehaviour):
     """Once loop finishes reports mission ending reason or error."""
@@ -174,9 +190,12 @@ def create_root(tf_buffer, storage_pose, dock_pose):
     # Go to delivery zone and drop package
     deliver_package = py_trees.composites.Sequence(name="DeliverPackage", memory=True)
     deliver_package.add_children([
-        ActionCall("GoToDeliveryZone", GoToDeliveryZone, "/custom_services/action/GoToDeliveryZone", TODO),
-        ActionCall("DropPackage", DropPackage, "/custom_services/action/DropPackage", TODO),
-        py_trees.behaviours.Running(name="Delivering Package..."),
+        ActionCall("GoToDeliveryZone", GoTo, "/go_to",
+                   lambda bb: GoTo.Goal(poi_name=bb.get("delivery_zone"),
+                                        slot_index=bb.get("delivery_counters")[bb.get("delivery_zone")]),
+                   reads=["delivery_zone", "delivery_counters"]),
+        ActionCall("DropPackage", DropPackage, "/drop_package", lambda _bb: DropPackage.Goal()),
+        IncrementCounter(),
     ])
 
     # Complete Delivery Cycle
