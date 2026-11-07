@@ -21,7 +21,7 @@ def generate_launch_description():
     twist_mux_params = os.path.join(package_dir, 'config', 'twist_mux.yaml')
 
     battery_node_launch = os.path.join(
-                get_package_share_directory('battery_node'), 'launch', 'battery_node_server.launch.py')
+                get_package_share_directory('battery_node'), 'launch', 'battery_node.launch.py')
 
     go_to_server_launch = os.path.join(
             get_package_share_directory('go_to_action'), 'launch', 'goto_action_server.launch.py')

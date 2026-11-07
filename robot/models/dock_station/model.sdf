@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<sdf version="1.9">
+  <!-- Black slab the robot drives onto to charge.
+       Visual only (no collision): the robot rides over it without bumps and the lidar does not see it.
+       Model frame: x = slab length (robot entry direction), origin = slab center. -->
+  <model name="dock_station">
+    <static>true</static>
+    <link name="slab">
+      <pose>0 0 0.005 0 0 0</pose>
+      <visual name="slab_visual">
+        <geometry>
+          <box>
+            <size>1.0 0.6 0.01</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.02 0.02 0.02 1</ambient>
+          <diffuse>0.02 0.02 0.02 1</diffuse>
+          <specular>0.05 0.05 0.05 1</specular>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>

@@ -1,0 +1,22 @@
+battery_node:
+  ros__parameters:
+
+    publish_rate: 5.0        # Hz: how often level is updated and published on /battery_state
+    initial_level: 0.2       # initial battery level in [0, 1]
+
+    drain_rate: 0.002        # 1/s while discharging
+    charge_rate: 0.02        # 1/s while charging
+
+    #  Reported current - Read by Nav2 SimpleChargingDock to detect charging
+    charge_current: 2.0      # A, reported as positive while charging
+    drain_current: 1.0       # A, reported as negative while discharging
+
+    # Dock station (center, in map frame)
+    # Use .nan to disable proximity charging
+    dock_x: 0.0
+    dock_y: 0.0
+    dock_radius: 0.15        # m: robot within this distance from the dock center is charging
+
+    # Frames 
+    map_frame: map
+    robot_frame: base_link
