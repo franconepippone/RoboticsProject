@@ -114,27 +114,6 @@ class ManualMove(BBBehaviour):
         if new_status == Status.INVALID and self.pub is not None:
             self.pub.publish(Twist())  
 
-class GoToDeliveryZone(BBBehaviour):
-    """Waits for new ID detection from AprilTag detector.
-       If nothing detected within `timeout_sec` seconds, mission ended."""
-
-    def __init__(self, name="ScanTag", timeout_sec=10.0):
-        super().__init__(
-            name,
-            reads=["target_tag_id"],
-            writes=["target_tag_id", "mission_end_reason"],
-        )
-        self.timeout = Duration(seconds=timeout_sec)
-        self._start = None
-
-    def initialise(self):
-        self._start = self.node.get_clock().now()
-        self.node.get_logger().info("Scanning packages AprilTags for info...")
-
-    def update(self):
-        ServiceCall("ScanAprilTags", SelectTag, '/custom_interfaces/srv/SelectTag',
-                    make_request=TODO, on_response=TODO, reads=[""])
-
 class ReportEnd(BBBehaviour):
     """Once loop finishes reports mission ending reason or error."""
 
@@ -187,8 +166,8 @@ def create_root(tf_buffer, storage_pose, dock_pose):
     pickup_package = py_trees.composites.Sequence(name="PickupPackage", memory=True)
     pickup_package.add_children([
         navigate("GoToStorage", lambda _bb: nav_goal(storage_pose)),
-        ServiceCall("SelectTag", SelectTag, "/custom_services/srv/SelectTag", TODO)
-        ActionCall("PickupPackage", PickupPallet, "/custom_services/action/PickupPallet", TODO)
+        ServiceCall("SelectTag", SelectTag, "/custom_services/srv/SelectTag", TODO),
+        ActionCall("PickupPackage", PickupPallet, "/custom_services/action/PickupPallet", TODO),
         py_trees.behaviours.Running(name="Picking Package..."),
     ])
 
@@ -196,7 +175,7 @@ def create_root(tf_buffer, storage_pose, dock_pose):
     deliver_package = py_trees.composites.Sequence(name="DeliverPackage", memory=True)
     deliver_package.add_children([
         ActionCall("GoToDeliveryZone", GoToDeliveryZone, "/custom_services/action/GoToDeliveryZone", TODO),
-        ActionCall("DropPackage", DropPackage, "/custom_services/action/DropPackage", TODO)
+        ActionCall("DropPackage", DropPackage, "/custom_services/action/DropPackage", TODO),
         py_trees.behaviours.Running(name="Delivering Package..."),
     ])
 
