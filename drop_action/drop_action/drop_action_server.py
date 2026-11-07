@@ -10,11 +10,8 @@ from robot.forklift_api import ForkliftAPI
 
 class DropActionServer(Node):
 
-    def __init__(self, linear_x=0.2, duration=5.0, package_num=None, delivery_zone_id=None):
+    def __init__(self, linear_x=0.2, duration=5.0):
         super().__init__('drop_action_server')
-
-        self.package_num = package_num
-        self.delivery_zone_id = delivery_zone_id
 
         # Attributes for Undocking maneuver
         self.linear_x = linear_x
@@ -40,7 +37,6 @@ class DropActionServer(Node):
 
     async def execute_callback(self, goal_handle):
         self.get_logger().info('Received request to drop package. Starting operation...')
-        self.get_logger().info(f"Package is number {self.package_num} in delivery zone {self.delivery_zone_id}.")
 
         # Initialize Feedback Message
         feedback_msg = DropPackage.Feedback()
