@@ -3,7 +3,7 @@ import math
 import time
 import yaml
 import rclpy
-from typing import Dict, Optional, Tuple
+from typing import Dict, Tuple
 
 from action_msgs.msg import GoalStatus
 from geometry_msgs.msg import PoseStamped
@@ -47,10 +47,6 @@ class GoToServer(Node):
         self.poi_poses: Dict[str, PoseStamped]
         self.delivery_zone_poses: Dict[str, PoseStamped]
         self.poi_poses, self.delivery_zone_poses = self._load_poi_file(poi_file)
-
-        # Package counters per zone
-        # Kept in memory for the whole node lifetime
-        self.delivery_zone_counters: Dict[str, int] = {name: 0 for name in self.delivery_zone_poses}
 
         self.get_logger().info(f'Loaded POIs: {list(self.poi_poses)}')
         self.get_logger().info(f'Loaded delivery zones: {list(self.delivery_zone_poses)}')
@@ -97,8 +93,8 @@ class GoToServer(Node):
 
     async def _execute(self, goal_handle: ServerGoalHandle):
         poi_name = goal_handle.request.poi_name
+        slot_index = goal_handle.request.slot_index
         feedback_msg = GoTo.Feedback()
-        zone_name: Optional[str] = None
 
         def finish(outcome: str, message: str) -> GoTo.Result:
             result = GoTo.Result()
@@ -121,15 +117,13 @@ class GoToServer(Node):
         if poi_name in self.poi_poses: goal_pose = copy.deepcopy(self.poi_poses[poi_name])
 
         elif poi_name in self.delivery_zone_poses:
-            zone_name = poi_name
-            n = self.delivery_zone_counters[zone_name]
 
-            if n >= self.max_slots: return finish('failed', f'Delivery zone {zone_name} is full ({n}/{self.max_slots})')
+            if not 0 <= slot_index < self.max_slots: return finish('failed', f'Invalid slot {slot_index} for {poi_name} (max {self.max_slots})')
 
-            feedback_msg.status = f'Computing staging pose (package #{n} of {zone_name})...'
+            feedback_msg.status = f'Computing staging pose (package #{slot_index} of {poi_name})...'
             self.get_logger().info(feedback_msg.status)
             goal_handle.publish_feedback(feedback_msg)
-            goal_pose = self._compute_staging_pose(zone_name)
+            goal_pose = self._compute_staging_pose(poi_name, slot_index)
 
         else: return finish('failed', f"Unknown point of interest: '{poi_name}'")
 
@@ -137,9 +131,6 @@ class GoToServer(Node):
         feedback_msg.status = 'Moving to goal pose...'
         goal_handle.publish_feedback(feedback_msg)
         outcome, message = await self._navigate(goal_handle, goal_pose, feedback_msg)
-
-        # Update slot counter
-        if outcome == 'ok' and zone_name is not None: self.delivery_zone_counters[zone_name] += 1
 
         return finish(outcome, message)
 
@@ -233,10 +224,9 @@ class GoToServer(Node):
     # ========================= #
     # Delivery Pose Computation #
     # ========================= #
-    def _compute_staging_pose(self, zone_name: str) -> PoseStamped:
+    def _compute_staging_pose(self, zone_name: str, n:int) -> PoseStamped:
         """Staging pose for the next free slot of `zone_name`."""
 
-        n = self.delivery_zone_counters[zone_name]
         zone_num = int(zone_name[len(DELIVERY_PREFIX):])
 
         # deepcopy, otherwise stored pose would be modified
@@ -253,7 +243,6 @@ class GoToServer(Node):
         pose.pose.position.y -= self.staging_distance * math.sin(yaw)
         
         return pose
-
 
 
 def main(args=None):
