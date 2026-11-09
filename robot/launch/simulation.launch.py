@@ -11,6 +11,7 @@ from launch.actions import (
 from launch_ros.actions import Node
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
+from launch.conditions import IfCondition
 
 
 def launch_setup(context, package_dir, launch_dir):
@@ -66,6 +67,13 @@ def launch_setup(context, package_dir, launch_dir):
         )
     ) 
 
+    # Autonomy node
+    autonomy_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(get_package_share_directory('autonomy'), 'launch', 'autonomy_node.launch.py')),
+        condition=IfCondition(LaunchConfiguration('autonomy')),
+    )
+
     if joypad: actions.append(joy_launch)
     if mode == 'slam': 
         actions.append(slam_launch)
@@ -99,14 +107,6 @@ def launch_setup(context, package_dir, launch_dir):
             launch_arguments={'world': world_path}.items(),
         ),
 
-        # Drop Action Server
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                os.path.join(get_package_share_directory('drop_action'),
-                            'launch', 'drop_action_server.launch.py')
-            )
-        ),
-
         # Spawn robot after Gazebo starts
         TimerAction(
             period=1.0,
@@ -123,6 +123,22 @@ def launch_setup(context, package_dir, launch_dir):
                 )
             ],
         ),
+
+        # Drop Action Server
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                os.path.join(get_package_share_directory('drop_action'),
+                            'launch', 'drop_action_server.launch.py')
+            )
+        ),
+        
+        # Autonomy node
+        DeclareLaunchArgument(
+            'autonomy',
+            default_value='true',
+            description='Start autonomy node'
+        ),
+        autonomy_launch,
     ]
 
 

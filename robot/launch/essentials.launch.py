@@ -55,9 +55,20 @@ def generate_launch_description():
             output='screen'
         ),
 
-        IncludeLaunchDescription(PythonLaunchDescriptionSource(battery_node_launch)),
-        IncludeLaunchDescription(PythonLaunchDescriptionSource(go_to_server_launch)),
-        IncludeLaunchDescription(PythonLaunchDescriptionSource(drive_mode_launch)),
+        # Battery management node
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(battery_node_launch)
+        ),
+
+        # Goto action server
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(go_to_server_launch)
+        ),
+
+        # Drive mode node
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(drive_mode_launch)
+        ),
 
         # Pallet pickup server
         IncludeLaunchDescription(
