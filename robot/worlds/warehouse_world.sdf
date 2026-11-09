@@ -402,25 +402,25 @@
   <include>
     <uri>model://package_000</uri>
     <name>forklift_package_000</name>
-    <pose>-9.5 1.5 0.2 0 0 0</pose>
+    <pose>-7.5 2.0 0.2 0 0 0</pose>
   </include>
 
   <include>
     <uri>model://package_001</uri>
     <name>forklift_package_001</name>
-    <pose>-9.5 2.5 0.2 0 0 0</pose>
+    <pose>-7.5 4.0 0.2 0 0 0</pose>
   </include>
 
   <include>
     <uri>model://package_002</uri>
     <name>forklift_package_002</name>
-    <pose>-9.5 3.5 0.2 0 0 0</pose>
+    <pose>-9.5 2.0 0.2 0 0 0</pose>
   </include>
 
   <include>
     <uri>model://package_003</uri>
     <name>forklift_package_003</name>
-    <pose>-9.5 4.5 0.2 0 0 0</pose>
+    <pose>-9.5 4.0 0.2 0 0 0</pose>
   </include>
 
 

@@ -4,8 +4,7 @@ import tf2_ros
 import py_trees
 import py_trees_ros.trees
 from geometry_msgs.msg import PoseWithCovarianceStamped
-from nav2_msgs.action import NavigateToPose
-from rclpy.action import ActionClient
+from std_srvs.srv import Trigger
 from rclpy.node import Node
 from rclpy.time import Time
 
@@ -28,7 +27,7 @@ class AutonomyNode(Node):
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
         self.initial_pose_pub = self.create_publisher(PoseWithCovarianceStamped, "/initialpose", 10)
-        self.nav_client = ActionClient(self, NavigateToPose, "navigate_to_pose")
+        self.nav_active_client = self.create_client(Trigger, "/lifecycle_manager_navigation/is_active")
 
         self.tree = py_trees_ros.trees.BehaviourTree(root=root, unicode_tree_debug=False)
         self.finished = []
@@ -58,10 +57,16 @@ class AutonomyNode(Node):
             self.initial_pose_pub.publish(msg)
             rclpy.spin_once(self, timeout_sec=1.0)
 
-        # /go_to needs Nav2 active: wait for its action server
-        log.info("Waiting for Nav2 navigate_to_pose server...")
-        while rclpy.ok() and not self.nav_client.wait_for_server(timeout_sec=1.0):
-            pass
+        # Nav2 servers exist once configured but reject goals until ACTIVE
+        # Wait for the whole stack to be ACTIVE
+        log.info("Waiting for Nav2 to be active...")
+        while rclpy.ok():
+            if self.nav_active_client.wait_for_service(timeout_sec=1.0):
+                future = self.nav_active_client.call_async(Trigger.Request())
+                rclpy.spin_until_future_complete(self, future, timeout_sec=2.0)
+                if future.done() and future.result().success:
+                    break
+            log.info("...still waiting for Nav2", throttle_duration_sec=5.0)
 
     # =========== Behavior Tree ========== #
     def start(self) -> bool:

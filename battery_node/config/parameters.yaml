@@ -2,7 +2,7 @@ battery_node:
   ros__parameters:
 
     publish_rate: 5.0        # Hz: how often level is updated and published on /battery_state
-    initial_level: 0.2       # initial battery level in [0, 1]
+    initial_level: 0.8       # initial battery level in [0, 1]
 
     drain_rate: 0.002        # 1/s while discharging
     charge_rate: 0.02        # 1/s while charging
