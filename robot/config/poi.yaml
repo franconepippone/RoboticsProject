@@ -14,14 +14,14 @@
     
     storage_location:
       position:
-        x: 0.0
-        y: 0.0
+        x: -6.0
+        y: 3.0
         z: 0.0
       orientation:
         x: 0.0
         y: 0.0
-        z: 0.7071068
-        w: 0.7071068
+        z: 1.0
+        w: 0.0
 
     delivery_locations:
       delivery_zone_0:

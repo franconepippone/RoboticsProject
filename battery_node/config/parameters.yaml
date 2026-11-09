@@ -17,6 +17,10 @@ battery_node:
     dock_y: 0.0
     dock_radius: 0.15        # m: robot within this distance from the dock center is charging
 
+    # Docking detection params
+    dock_max_speed: 0.05     # m/s: robot moving faster than this is only passing over the dock
+    odom_topic: /odom
+
     # Frames 
     map_frame: map
     robot_frame: base_link

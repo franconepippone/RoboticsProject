@@ -7,6 +7,7 @@ from rclpy.node import Node
 from rclpy.time import Time
 from sensor_msgs.msg import BatteryState
 from std_srvs.srv import SetBool
+from nav_msgs.msg import Odometry
 
 
 class BatteryNode(Node):
@@ -36,6 +37,8 @@ class BatteryNode(Node):
         self.declare_parameter('dock_x', math.nan)       # dock center in map frame (NaN: disabled)
         self.declare_parameter('dock_y', math.nan)
         self.declare_parameter('dock_radius', 0.15)      # m
+        self.declare_parameter('dock_max_speed', 0.05)   # m/s: faster than this = just passing over
+        self.declare_parameter('odom_topic', '/odom')
         self.declare_parameter('map_frame', 'map')
         self.declare_parameter('robot_frame', 'base_link')
 
@@ -47,6 +50,8 @@ class BatteryNode(Node):
         self.dock_x = float(self.get_parameter('dock_x').value)
         self.dock_y = float(self.get_parameter('dock_y').value)
         self.dock_radius = float(self.get_parameter('dock_radius').value)
+        self.dock_max_speed = float(self.get_parameter('dock_max_speed').value)
+        self.speed = math.inf     # unknown until first odometry message
         self.map_frame = self.get_parameter('map_frame').value
         self.robot_frame = self.get_parameter('robot_frame').value
 
@@ -67,6 +72,7 @@ class BatteryNode(Node):
             self.get_logger().warning("dock_x/dock_y not set: charging only via /set_charging")
 
         self.pub = self.create_publisher(BatteryState, '/battery_state', 10)
+        self.create_subscription(Odometry, self.get_parameter('odom_topic').value, self.on_odom, 10)
         self.create_service(SetBool, '/set_charging', self.on_set_charging)
         self.create_timer(1.0 / publish_rate, self.on_timer)
 
@@ -80,6 +86,10 @@ class BatteryNode(Node):
         response.message = 'charging forced' if request.data else 'charging not forced'
         return response
 
+    def on_odom(self, msg):
+        v = msg.twist.twist.linear
+        self.speed = math.hypot(v.x, v.y) # compute |v|
+
     def _update_on_dock(self):
         """Robot is on the dock when base_link is within dock_radius of the dock center."""
         if not self.dock_enabled:
@@ -92,8 +102,8 @@ class BatteryNode(Node):
             return
         dist = math.hypot(t.transform.translation.x - self.dock_x,
                           t.transform.translation.y - self.dock_y)
-        self.on_dock = dist <= self.dock_radius
-
+        self.on_dock = dist <= self.dock_radius and self.speed <= self.dock_max_speed
+        
     @property
     def charging(self) -> bool:
         return self.forced_charging or self.on_dock

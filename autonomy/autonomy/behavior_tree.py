@@ -2,14 +2,9 @@
 import tf2_ros
 import py_trees
 from rclpy.duration import Duration
-from irobot_create_msgs.action import Dock, Undock
-from irobot_create_msgs.msg import DockStatus
+from nav2_msgs.action import DockRobot, UndockRobot
 from sensor_msgs.msg import BatteryState
 from rclpy.time import Time
-
-# TODO(charging)
-# import Dock/Undock actions and DockStatus msg once they are defined
-# from sensor_msgs.msg import BatteryState
 
 from custom_interfaces.action import PickupPallet, GoTo, DropPackage 
 from custom_interfaces.srv import SelectTag 
@@ -22,8 +17,6 @@ Access = py_trees.common.Access
 
 BATTERY_LOW = 0.30      # Threshold to check when starting a delivery cycle
 BATTERY_FULL = 1.00     # Threshold to consider the robot charged
-BATTERY_DRAIN_RATE = 0.002   # 1/s of sim time while working
-BATTERY_CHARGE_RATE = 0.02   # 1/s of sim time while charging
 
 N_ZONES = 4
 
@@ -64,7 +57,7 @@ class IsUndocked(BBBehaviour):
     def update(self):
         docked = self.bb_get("is_docked")
         if docked is None:
-            self.feedback_message = "Waiting for /dock_status"
+            self.feedback_message = "Waiting for /battery_state. Docking determined by current [A] sign."
             return Status.RUNNING
         return Status.FAILURE if docked else Status.SUCCESS
 
@@ -169,7 +162,7 @@ class ReportEnd(BBBehaviour):
 # ========== #
 # Build Tree #
 # ========== #
-def create_root(tf_buffer):
+def create_root():
 
     # Slot counters per delivery zone
     init = py_trees.blackboard.Client(name="BTInit")
@@ -179,27 +172,34 @@ def create_root(tf_buffer):
     # Write perceptions from topics to blackboard
     topics2bb = py_trees.composites.Sequence(name="Topics2BB", memory=False)
     topics2bb.add_children([
-        TopicToBlackboard("Battery2BB", "/battery_state", BatteryState, ["battery_percentage"],
-                          lambda m: {"battery_percentage": m.percentage}),
-        TopicToBlackboard("Dock2BB", "/dock_status", DockStatus, ["is_docked"],
-                          lambda m: {"is_docked": m.is_docked}),
+        TopicToBlackboard(
+            "Battery2BB", "/battery_state", BatteryState, ["battery_percentage", "is_docked"],
+            lambda m: {
+                "battery_percentage": m.percentage,
+                "is_docked": m.power_supply_status in (BatteryState.POWER_SUPPLY_STATUS_CHARGING,
+                                                       BatteryState.POWER_SUPPLY_STATUS_FULL),
+            }),
     ])
 
     # Check Battery
     # If not ok go to dock station, dock and charge
     charge = py_trees.composites.Sequence(name="Charge", memory=True)
+    dock = ActionCall("Dock", DockRobot, "/dock_robot",
+                      lambda _bb: DockRobot.Goal(use_dock_id=True, dock_id="home_dock",
+                                                 navigate_to_staging_pose=True))
+    
+    dock_manager = py_trees.composites.Selector(name="DockManager", memory=True) # memory=True: IsDocked is not re-evaluated
+    dock_manager.add_children([py_trees.decorators.Inverter(name="IsDocked", child=IsUndocked()), dock])
     charge.add_children([
-        ActionCall("GoToDock", GoTo, "/go_to",
-                   lambda _bb: GoTo.Goal(poi_name="dock_location", slot_index=0),
-                   format_feedback=lambda fb: fb.feedback.status),
-        ActionCall("Dock", Dock, "/dock", lambda _bb: Dock.Goal()),
+        dock_manager,
         py_trees.behaviours.Running(name="Charging"),   # until BatteryOK not return SUCCESS
     ])
     battery_manager = py_trees.composites.Selector(name="BatteryManager", memory=False)
     battery_manager.add_children([BatteryOK(), charge])
 
     # Undock
-    undock = ActionCall("Undock", Undock, "/undock", lambda _bb: Undock.Goal())
+    undock = ActionCall("Undock", UndockRobot, "/undock_robot",
+                        lambda _bb: UndockRobot.Goal(dock_type="charging_dock"))
     undock_manager = py_trees.composites.Selector(name="UndockManager", memory=False)
     undock_manager.add_children([IsUndocked(), undock])
 
@@ -231,7 +231,7 @@ def create_root(tf_buffer):
     cycle.add_children([
         battery_manager,
         undock_manager,
-        TFReady("MapTF", tf_buffer, [("map", "base_link")]),
+        TFReady("MapTF", [("map", "base_link")]),
         pickup_package,
         deliver_package
     ])
