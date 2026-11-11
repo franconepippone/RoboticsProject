@@ -15,6 +15,9 @@ class JoyControlNode(Node):
 
     def __init__(self):
         super().__init__('joy_control_node')
+        self.declare_parameter('deadzone', value=0.1)
+
+        self.deadzone = self.get_parameter('deadzone').get_parameter_value().double_value
 
         self.cmd_vel_publisher = self.create_publisher(
             Twist,
@@ -52,14 +55,13 @@ class JoyControlNode(Node):
         cmd = Twist()
 
         if len(msg.axes) > max(self.linear_axis, self.angular_axis):
-            cmd.linear.x = (
-                self.linear_speed * msg.axes[self.linear_axis]
-            )
-            cmd.angular.z = (
-                self.angular_speed * msg.axes[self.angular_axis]
-            )
+            cmd.linear.x = self.linear_speed * msg.axes[self.linear_axis]
+            cmd.angular.z = self.angular_speed * msg.axes[self.angular_axis]
 
-        self.cmd_vel_publisher.publish(cmd)
+
+        # only publish if input is above deadzone
+        if abs(cmd.linear.x) > self.deadzone or abs(cmd.angular.z) > self.deadzone:
+            self.cmd_vel_publisher.publish(cmd)
 
         # Initialize button history on the first message.
         if not self.previous_buttons:
