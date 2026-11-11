@@ -45,6 +45,9 @@ class JoyControlNode(Node):
         self.forklift_is_raised = False
         self.previous_buttons = []
 
+        # track if last joy command has been actually published
+        self._just_published = False
+
         self.get_logger().info(
             'Joystick control ready: '
             'left stick = drive, R1 = toggle forklift'
@@ -62,6 +65,10 @@ class JoyControlNode(Node):
         # only publish if input is above deadzone
         if abs(cmd.linear.x) > self.deadzone or abs(cmd.angular.z) > self.deadzone:
             self.cmd_vel_publisher.publish(cmd)
+            self._just_published = True
+        elif self._just_published:
+            self._just_published = False
+            self.cmd_vel_publisher.publish(Twist()) # publish an empty twist
 
         # Initialize button history on the first message.
         if not self.previous_buttons:
